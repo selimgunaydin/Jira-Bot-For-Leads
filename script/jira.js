@@ -37,38 +37,22 @@ const logger = createLogger({
 let JIRA_BASE_URL;
 let EMAIL;
 let API_TOKEN;
-let YOUR_ACCOUNT_ID;
 let PROJECT_KEY = "S1";
 let TASK_STATUS = "Selected for Development";
-let TEST_MODE = false;
 
 ipcMain.on("update-config", (event, config) => {
   JIRA_BASE_URL = config.JIRA_BASE_URL;
   EMAIL = config.EMAIL;
   API_TOKEN = config.API_TOKEN;
-  YOUR_ACCOUNT_ID = config.YOUR_ACCOUNT_ID;
   PROJECT_KEY = config.PROJECT_KEY || "S1";
   TASK_STATUS = config.TASK_STATUS || "Selected for Development";
-  TEST_MODE = config.TEST_MODE;
   logger.info("---- Konfigürasyon güncellendi ----");
   logger.info(`JIRA_BASE_URL: ${JIRA_BASE_URL}`);
   logger.info(`EMAIL: ${EMAIL}`);
   logger.info(`API_TOKEN: ********`);
-  logger.info(`ACCOUNT_ID: ${YOUR_ACCOUNT_ID}`);
   logger.info(`PROJECT_KEY: ${PROJECT_KEY}`);
   logger.info(`TASK_STATUS: ${TASK_STATUS}`);
-  logger.info(`TEST_MODE: ${TEST_MODE}`);
   logger.info("---- Konfigürasyon güncellendi ----");
-});
-
-let excludedTasks = ["S1-30899"];
-
-ipcMain.on("update-excluded-tasks", (event, tasks) => {
-  excludedTasks = tasks
-    .split("\n")
-    .map((task) => task.trim())
-    .filter((task) => task.length > 0);
-  logger.info(`Hariç tutulan tasklar güncellendi: ${excludedTasks.join(", ")}`);
 });
 
 async function getProjectUsers() {

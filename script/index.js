@@ -24,26 +24,20 @@ overlay.addEventListener("click", closeSidebar);
 const jiraBaseUrl = document.getElementById("jiraBaseUrl");
 const email = document.getElementById("email");
 const apiToken = document.getElementById("apiToken");
-const accountId = document.getElementById("accountId");
 const projectKey = document.getElementById("projectKey");
 
 const taskStatus = document.getElementById("taskStatus");
-const testMode = document.getElementById("testMode");
 
 jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL") || "";
 email.value = localStorage.getItem("EMAIL") || "";
 apiToken.value = localStorage.getItem("API_TOKEN") || "";
-accountId.value = localStorage.getItem("YOUR_ACCOUNT_ID") || "";
 projectKey.value = localStorage.getItem("PROJECT_KEY") || "S1";
-taskStatus.value =
-  localStorage.getItem("TASK_STATUS") || "Selected for Development";
-testMode.checked = localStorage.getItem("TEST_MODE") === "true";
+taskStatus.value = localStorage.getItem("TASK_STATUS") || "Selected for Development";
 
 const configInputs = [
   jiraBaseUrl,
   email,
   apiToken,
-  accountId,
   projectKey,
   taskStatus,
 ];
@@ -52,7 +46,6 @@ configInputs.forEach((input) => {
     localStorage.setItem("JIRA_BASE_URL", jiraBaseUrl.value);
     localStorage.setItem("EMAIL", email.value);
     localStorage.setItem("API_TOKEN", apiToken.value);
-    localStorage.setItem("YOUR_ACCOUNT_ID", accountId.value);
     localStorage.setItem("PROJECT_KEY", projectKey.value);
     localStorage.setItem("TASK_STATUS", taskStatus.value);
 
@@ -60,23 +53,9 @@ configInputs.forEach((input) => {
       JIRA_BASE_URL: jiraBaseUrl.value,
       EMAIL: email.value,
       API_TOKEN: apiToken.value,
-      YOUR_ACCOUNT_ID: accountId.value,
       PROJECT_KEY: projectKey.value,
       TASK_STATUS: taskStatus.value,
     });
-  });
-});
-
-testMode.addEventListener("change", () => {
-  localStorage.setItem("TEST_MODE", testMode.checked);
-  ipcRenderer.send("update-config", {
-    JIRA_BASE_URL: jiraBaseUrl.value,
-    EMAIL: email.value,
-    API_TOKEN: apiToken.value,
-    YOUR_ACCOUNT_ID: accountId.value,
-    PROJECT_KEY: projectKey.value,
-    TASK_STATUS: taskStatus.value,
-    TEST_MODE: testMode.checked,
   });
 });
 
@@ -85,10 +64,8 @@ window.addEventListener("load", () => {
     JIRA_BASE_URL: jiraBaseUrl.value,
     EMAIL: email.value,
     API_TOKEN: apiToken.value,
-    YOUR_ACCOUNT_ID: accountId.value,
     PROJECT_KEY: projectKey.value,
     TASK_STATUS: taskStatus.value,
-    TEST_MODE: testMode.checked,
   });
 });
 
@@ -98,14 +75,6 @@ ipcRenderer.on("log-message", (event, message) => {
   const formattedMessage = message.trim() + "\n";
   logs.textContent += formattedMessage;
   logs.scrollTop = logs.scrollHeight;
-});
-
-const excludedTasksList = document.getElementById("excludedTasksList");
-excludedTasksList.value = localStorage.getItem("excludedTasks") || "S1-30899";
-
-excludedTasksList.addEventListener("input", () => {
-  localStorage.setItem("excludedTasks", excludedTasksList.value);
-  ipcRenderer.send("update-excluded-tasks", excludedTasksList.value);
 });
 
 // Leaderboard operations
