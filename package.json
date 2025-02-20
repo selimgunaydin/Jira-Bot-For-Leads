@@ -1,0 +1,31 @@
+{
+  "name": "jira-bot",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.jirabot.app",
+    "mac": {
+      "category": "public.app-category.productivity"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@slack/web-api": "^7.8.0",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "winston": "^3.17.0",
+    "winston-transport": "^4.9.0"
+  },
+  "devDependencies": {
+    "@electron/remote": "^2.1.2",
+    "electron": "^29.1.0",
+    "electron-builder": "^24.12.0"
+  },
+  "description": "Jira Task Atama Botu"
+}
