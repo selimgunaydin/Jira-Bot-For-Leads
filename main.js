@@ -1,5 +1,8 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
-const { getLeaderboard } = require("./script/jira");
+
+const {
+  getLeaderboard,
+} = require("./script/jira");
 
 function createWindow() {
   const win = new BrowserWindow({

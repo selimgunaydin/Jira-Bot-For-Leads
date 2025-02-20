@@ -34,11 +34,13 @@ const logger = createLogger({
   transports: [new transports.Console(), new ElectronTransport()],
 });
 
+let userCount = 0;
 let JIRA_BASE_URL;
 let EMAIL;
 let API_TOKEN;
 let PROJECT_KEY = "S1";
 let TASK_STATUS = "Selected for Development";
+let EXCLUDED_EMAILS = "";
 
 ipcMain.on("update-config", (event, config) => {
   JIRA_BASE_URL = config.JIRA_BASE_URL;
@@ -46,22 +48,28 @@ ipcMain.on("update-config", (event, config) => {
   API_TOKEN = config.API_TOKEN;
   PROJECT_KEY = config.PROJECT_KEY || "S1";
   TASK_STATUS = config.TASK_STATUS || "Selected for Development";
+  EXCLUDED_EMAILS = config.EXCLUDED_EMAILS || "";
   logger.info("---- Konfigürasyon güncellendi ----");
   logger.info(`JIRA_BASE_URL: ${JIRA_BASE_URL}`);
   logger.info(`EMAIL: ${EMAIL}`);
   logger.info(`API_TOKEN: ********`);
   logger.info(`PROJECT_KEY: ${PROJECT_KEY}`);
   logger.info(`TASK_STATUS: ${TASK_STATUS}`);
+  logger.info(`EXCLUDED_EMAILS: ${EXCLUDED_EMAILS}`);
   logger.info("---- Konfigürasyon güncellendi ----");
 });
 
 async function getProjectUsers() {
+  userCount++;
   try {
-    logger.info("Proje kullanıcıları çekiliyor...");
-
+    if (userCount === 1) {
+      logger.info("Proje kullanıcıları yükleniyor (Task Assignment)");
+    } else {
+      logger.info(`Proje kullanıcıları yükleniyor (Leaderboard)`);
+    }
     // Son 3 ayda projede aktif olan kullanıcıları bulmak için JQL sorgusu
     const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 1);
 
     const jqlQuery = `project = "${PROJECT_KEY}" AND assignee IS NOT EMPTY AND updated >= "${
       threeMonthsAgo.toISOString().split("T")[0]
@@ -85,6 +93,11 @@ async function getProjectUsers() {
       }
     });
 
+    // Hariç tutulacak e-postaları diziye çevir ve boşlukları temizle
+    const excludedEmailList = EXCLUDED_EMAILS
+      ? EXCLUDED_EMAILS.split(/[\n\r]+/).map(email => email.trim().toLowerCase()).filter(email => email.length > 0)
+      : [];
+
     // Aktif kullanıcıların detaylarını çek
     const activeUsers = [];
     for (const accountId of activeUserIds) {
@@ -101,7 +114,8 @@ async function getProjectUsers() {
           user.active &&
           !user.displayName.includes("addon") &&
           !user.displayName.toLowerCase().includes("bot") &&
-          !user.displayName.toLowerCase().includes("system")
+          !user.displayName.toLowerCase().includes("system") &&
+          !excludedEmailList.includes(user.emailAddress.toLowerCase())
         ) {
           activeUsers.push(user);
         }
@@ -111,9 +125,11 @@ async function getProjectUsers() {
         );
       }
     }
-
-    logger.info(`Toplam ${activeUsers.length} aktif kullanıcı bulundu`);
-    logger.info("Leaderboard hesaplanıyor...");
+    if (userCount === 1) {
+      logger.info(`Toplam ${activeUsers.length} aktif kullanıcı bulundu (Task Assignment)`);
+    } else {
+      logger.info(`Toplam ${activeUsers.length} aktif kullanıcı bulundu (Leaderboard)`);
+    }
     return activeUsers;
   } catch (error) {
     logger.error(
@@ -157,9 +173,8 @@ async function getUserAllTasks(accountId) {
 }
 
 async function calculateLeaderboard() {
-  logger.info("Leaderboard hesaplanıyor...");
-
   const users = await getProjectUsers();
+  logger.info("Leaderboard hesaplanıyor...");
   const leaderboardData = [];
 
   for (const user of users) {

@@ -25,14 +25,15 @@ const jiraBaseUrl = document.getElementById("jiraBaseUrl");
 const email = document.getElementById("email");
 const apiToken = document.getElementById("apiToken");
 const projectKey = document.getElementById("projectKey");
-
 const taskStatus = document.getElementById("taskStatus");
+const excludedEmails = document.getElementById("excludedEmails");
 
 jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL") || "";
 email.value = localStorage.getItem("EMAIL") || "";
 apiToken.value = localStorage.getItem("API_TOKEN") || "";
 projectKey.value = localStorage.getItem("PROJECT_KEY") || "S1";
 taskStatus.value = localStorage.getItem("TASK_STATUS") || "Selected for Development";
+excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS") || "";
 
 const configInputs = [
   jiraBaseUrl,
@@ -40,6 +41,7 @@ const configInputs = [
   apiToken,
   projectKey,
   taskStatus,
+  excludedEmails,
 ];
 configInputs.forEach((input) => {
   input.addEventListener("change", () => {
@@ -48,6 +50,7 @@ configInputs.forEach((input) => {
     localStorage.setItem("API_TOKEN", apiToken.value);
     localStorage.setItem("PROJECT_KEY", projectKey.value);
     localStorage.setItem("TASK_STATUS", taskStatus.value);
+    localStorage.setItem("EXCLUDED_EMAILS", excludedEmails.value);
 
     ipcRenderer.send("update-config", {
       JIRA_BASE_URL: jiraBaseUrl.value,
@@ -55,6 +58,7 @@ configInputs.forEach((input) => {
       API_TOKEN: apiToken.value,
       PROJECT_KEY: projectKey.value,
       TASK_STATUS: taskStatus.value,
+      EXCLUDED_EMAILS: excludedEmails.value,
     });
   });
 });
@@ -66,6 +70,7 @@ window.addEventListener("load", () => {
     API_TOKEN: apiToken.value,
     PROJECT_KEY: projectKey.value,
     TASK_STATUS: taskStatus.value,
+    EXCLUDED_EMAILS: excludedEmails.value,
   });
 });
 
@@ -279,6 +284,7 @@ ipcRenderer.on("task-assigned", (event, result) => {
 
 // Update lists on page load
 window.addEventListener("load", () => {
+  updateLeaderboard();
   updateUserList();
   updateTaskList();
 });
