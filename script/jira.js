@@ -257,7 +257,7 @@ async function getLeaderboard() {
 
 async function getUnassignedTasks() {
   try {
-    const jqlQuery = `project = "${PROJECT_KEY}" AND status = "${TASK_STATUS}" AND assignee is EMPTY ORDER BY created DESC`;
+    const jqlQuery = `project = "${PROJECT_KEY}" AND Sprint IS NOT EMPTY AND "Story Points" IS NOT EMPTY AND status = "${TASK_STATUS}" AND assignee IS EMPTY AND created >= -30d ORDER BY created DESC`;
 
     const response = await axios.get(
       `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(
