@@ -202,7 +202,7 @@ ipcRenderer.on("project-users-data", (event, users) => {
     users.forEach((user) => {
       const option = document.createElement("option");
       option.value = user.accountId;
-      option.textContent = user.displayName;
+      option.textContent = `${user.displayName} ${user.hasInProgressTasks ? '(🔄 In Progress)' : '(✅ Available)'}`;
       assigneeUser.appendChild(option);
     });
   } catch (error) {
@@ -275,10 +275,15 @@ ipcRenderer.on("task-assigned", (event, result) => {
   assignTask.textContent = "Start Process";
 
   if (result.success) {
-    alert(`Task successfully assigned to ${result.selectedUser.displayName}!`);
+    alert(`Task başarıyla atandı!`);
     updateTaskList();
   } else {
-    alert(result.error || "Task assignment failed!");
+    if (result.activeTasks && result.activeTasks.length > 0) {
+      const taskList = result.activeTasks.join('\n');
+      alert(`Kullanıcının üzerinde aktif task'lar olduğu için atama yapılamadı.\n\nAktif Task'lar:\n${taskList}`);
+    } else {
+      alert(result.error || "Task atama işlemi başarısız oldu!");
+    }
   }
 });
 

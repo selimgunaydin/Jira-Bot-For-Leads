@@ -59,6 +59,26 @@ ipcMain.on("update-config", (event, config) => {
   logger.info("---- Konfigürasyon güncellendi ----");
 });
 
+async function hasInProgressTasks(accountId) {
+  try {
+    const jqlQuery = `project = "${PROJECT_KEY}" AND assignee = ${accountId} AND status = "In Progress"`;
+    const response = await axios.get(
+      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}`,
+      {
+        auth: { username: EMAIL, password: API_TOKEN },
+      }
+    );
+    return response.data.total > 0;
+  } catch (error) {
+    logger.error(
+      `Hata oluştu (in-progress task kontrolü): ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
+    return false;
+  }
+}
+
 async function getProjectUsers() {
   userCount++;
   try {
@@ -117,7 +137,11 @@ async function getProjectUsers() {
           !user.displayName.toLowerCase().includes("system") &&
           !excludedEmailList.includes(user.emailAddress.toLowerCase())
         ) {
-          activeUsers.push(user);
+          const hasInProgress = await hasInProgressTasks(accountId);
+          activeUsers.push({
+            ...user,
+            hasInProgressTasks: hasInProgress
+          });
         }
       } catch (error) {
         logger.error(
@@ -279,8 +303,56 @@ async function getUnassignedTasks() {
   }
 }
 
+async function hasActiveTask(accountId) {
+  try {
+    const jqlQuery = `project = "${PROJECT_KEY}" AND assignee = ${accountId} AND status in ("Selected for Development", "In Progress")`;
+    const response = await axios.get(
+      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}`,
+      {
+        auth: { username: EMAIL, password: API_TOKEN },
+      }
+    );
+    
+    if (response.data.total > 0) {
+      const tasks = response.data.issues.map(issue => `${issue.key}: ${issue.fields.summary} (${issue.fields.status.name})`);
+      return {
+        hasActive: true,
+        tasks: tasks
+      };
+    }
+    
+    return {
+      hasActive: false,
+      tasks: []
+    };
+  } catch (error) {
+    logger.error(
+      `Hata oluştu (aktif task kontrolü): ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
+    return {
+      hasActive: false,
+      tasks: []
+    };
+  }
+}
+
 async function assignTaskToUser(taskKey, accountId) {
   try {
+    // Kullanıcının aktif task'larını kontrol et
+    const activeTaskCheck = await hasActiveTask(accountId);
+    
+    if (activeTaskCheck.hasActive) {
+      const taskList = activeTaskCheck.tasks.join('\n');
+      logger.warn(`Kullanıcının üzerinde aktif task'lar var:\n${taskList}`);
+      return {
+        success: false,
+        error: 'Kullanıcının üzerinde aktif task\'lar var',
+        activeTasks: activeTaskCheck.tasks
+      };
+    }
+
     await axios.put(
       `${JIRA_BASE_URL}/rest/api/3/issue/${taskKey}/assignee`,
       {
@@ -291,14 +363,19 @@ async function assignTaskToUser(taskKey, accountId) {
       }
     );
     logger.info(`Task ${taskKey} başarıyla ${accountId} kullanıcısına atandı.`);
-    return true;
+    return {
+      success: true
+    };
   } catch (error) {
     logger.error(
       `Hata oluştu (task atama): ${
         error.response ? JSON.stringify(error.response.data) : error.message
       }`
     );
-    return false;
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
 
@@ -395,9 +472,9 @@ ipcMain.on(
       if (!selectedUser) {
         throw new Error("Kullanıcı bulunamadı");
       }
-
-      const success = await assignTaskToUser(taskKey, selectedUser.accountId);
-      event.reply("task-assigned", { success, selectedUser });
+      logger.info(`Task ${selectedUser.displayName},  ${taskKey} atanıyor...`);
+      // const result = await assignTaskToUser(taskKey, selectedUser.accountId);
+      // event.reply("task-assigned", result);
     } catch (error) {
       logger.error(`Task atama işlemi başarısız oldu: ${error.message}`);
       event.reply("task-assigned", { success: false, error: error.message });
