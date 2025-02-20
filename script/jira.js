@@ -34,10 +34,6 @@ const logger = createLogger({
   transports: [new transports.Console(), new ElectronTransport()],
 });
 
-let cachedUsers = [];
-let cachedTasks = [];
-let cachedLowestDoneUser = null;
-let cachedLowestTotalUser = null;
 let JIRA_BASE_URL;
 let EMAIL;
 let API_TOKEN;
@@ -153,7 +149,6 @@ async function getProjectUsers() {
 
     logger.info(`Toplam ${activeUsers.length} aktif kullanıcı bulundu.`);
 
-    cachedUsers = activeUsers;
     return activeUsers;
   } catch (error) {
     logger.error(
@@ -209,7 +204,6 @@ async function getUnassignedTasks() {
       }
     );
 
-    cachedTasks = response.data.issues;
     return response.data.issues;
   } catch (error) {
     logger.error(
@@ -360,7 +354,7 @@ ipcMain.on("get-project-users", async (event) => {
 
 ipcMain.on("get-unassigned-tasks", async (event) => {
   try {
-    const tasks = cachedTasks || (await getUnassignedTasks());
+    const tasks = await getUnassignedTasks();
     event.reply("unassigned-tasks-data", tasks);
   } catch (error) {
     logger.error(`Atanmamış tasklar alınırken hata oluştu: ${error.message}`);
@@ -372,7 +366,7 @@ ipcMain.on(
   "assign-task",
   async (event, { taskKey, assignmentType, selectedUserId }) => {
     try {
-      const users = cachedUsers || (await getProjectUsers());
+      const users = await getProjectUsers();
       let selectedUser = null;
 
       switch (assignmentType) {
