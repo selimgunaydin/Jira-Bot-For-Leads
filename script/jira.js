@@ -80,13 +80,9 @@ async function hasInProgressTasks(accountId) {
 }
 
 async function getProjectUsers() {
-  userCount++;
   try {
-    if (userCount === 1) {
-      logger.info("Proje kullanıcıları yükleniyor (Task Assignment)");
-    } else {
-      logger.info(`Proje kullanıcıları yükleniyor (Leaderboard)`);
-    }
+    logger.info("Proje kullanıcıları yükleniyo..");
+
     // Son 3 ayda projede aktif olan kullanıcıları bulmak için JQL sorgusu
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 1);
@@ -115,7 +111,9 @@ async function getProjectUsers() {
 
     // Hariç tutulacak e-postaları diziye çevir ve boşlukları temizle
     const excludedEmailList = EXCLUDED_EMAILS
-      ? EXCLUDED_EMAILS.split(/[\n\r]+/).map(email => email.trim().toLowerCase()).filter(email => email.length > 0)
+      ? EXCLUDED_EMAILS.split(/[\n\r]+/)
+          .map((email) => email.trim().toLowerCase())
+          .filter((email) => email.length > 0)
       : [];
 
     // Aktif kullanıcıların detaylarını çek
@@ -140,7 +138,7 @@ async function getProjectUsers() {
           const hasInProgress = await hasInProgressTasks(accountId);
           activeUsers.push({
             ...user,
-            hasInProgressTasks: hasInProgress
+            hasInProgressTasks: hasInProgress,
           });
         }
       } catch (error) {
@@ -149,11 +147,9 @@ async function getProjectUsers() {
         );
       }
     }
-    if (userCount === 1) {
-      logger.info(`Toplam ${activeUsers.length} aktif kullanıcı bulundu (Task Assignment)`);
-    } else {
-      logger.info(`Toplam ${activeUsers.length} aktif kullanıcı bulundu (Leaderboard)`);
-    }
+
+    logger.info(`Toplam ${activeUsers.length} aktif kullanıcı bulundu.`);
+
     return activeUsers;
   } catch (error) {
     logger.error(
@@ -196,89 +192,6 @@ async function getUserAllTasks(accountId) {
   }
 }
 
-async function calculateLeaderboard() {
-  const users = await getProjectUsers();
-  logger.info("Leaderboard hesaplanıyor...");
-  const leaderboardData = [];
-
-  for (const user of users) {
-    const allTasks = await getUserAllTasks(user.accountId);
-    let totalPoints = 0;
-    let allTaskTotalPoint = 0;
-    let completedTaskCount = 0;
-
-    for (const task of allTasks) {
-      const storyPoints = task.fields.customfield_10028;
-      if (storyPoints && task.fields.status.name === "Done") {
-        totalPoints += storyPoints;
-        completedTaskCount++;
-      }
-    }
-
-    for (const task of allTasks) {
-      const storyPoints = task.fields.customfield_10028;
-      if (storyPoints) {
-        allTaskTotalPoint += storyPoints;
-      }
-    }
-
-    leaderboardData.push({
-      displayName: user.displayName,
-      email: user.emailAddress,
-      accountId: user.accountId,
-      avatarUrl: user.avatarUrls["48x48"],
-      totalPoints,
-      completedTaskCount,
-      totalTaskCount: allTasks.length,
-      allTaskTotalPoint,
-      tasks: allTasks.map((t) => ({
-        key: t.key,
-        summary: t.fields.summary,
-        points: t.fields.customfield_10028 || 0,
-      })),
-      allTasks: allTasks.map((t) => ({
-        key: t.key,
-        summary: t.fields.summary,
-        points: t.fields.customfield_10028 || 0,
-        status: t.fields.status.name,
-      })),
-    });
-  }
-
-  // Puanlara göre sırala
-  leaderboardData.sort((a, b) => b.totalPoints - a.totalPoints);
-
-  logger.info("Leaderboard hesaplandı");
-  return leaderboardData;
-}
-
-async function getLeaderboard() {
-  try {
-    const leaderboard = await calculateLeaderboard();
-    logger.info(
-      `Leaderboard oluşturuldu. Toplam ${leaderboard.length} kullanıcı listelendi.`
-    );
-
-    // Detaylı log
-    leaderboard.forEach((user, index) => {
-      logger.info(
-        `${index + 1}. ${user.displayName}: ${user.totalPoints} puan (${
-          user.completedTaskCount
-        } task)`
-      );
-    });
-
-    return leaderboard;
-  } catch (error) {
-    logger.error(
-      `Leaderboard oluşturulurken hata oluştu: ${
-        error.response ? JSON.stringify(error.response.data) : error.message
-      }`
-    );
-    return [];
-  }
-}
-
 async function getUnassignedTasks() {
   try {
     const jqlQuery = `project = "${PROJECT_KEY}" AND Sprint IS NOT EMPTY AND "Story Points" IS NOT EMPTY AND status = "${TASK_STATUS}" AND assignee IS EMPTY AND created >= -30d ORDER BY created DESC`;
@@ -312,18 +225,21 @@ async function hasActiveTask(accountId) {
         auth: { username: EMAIL, password: API_TOKEN },
       }
     );
-    
+
     if (response.data.total > 0) {
-      const tasks = response.data.issues.map(issue => `${issue.key}: ${issue.fields.summary} (${issue.fields.status.name})`);
+      const tasks = response.data.issues.map(
+        (issue) =>
+          `${issue.key}: ${issue.fields.summary} (${issue.fields.status.name})`
+      );
       return {
         hasActive: true,
-        tasks: tasks
+        tasks: tasks,
       };
     }
-    
+
     return {
       hasActive: false,
-      tasks: []
+      tasks: [],
     };
   } catch (error) {
     logger.error(
@@ -333,7 +249,7 @@ async function hasActiveTask(accountId) {
     );
     return {
       hasActive: false,
-      tasks: []
+      tasks: [],
     };
   }
 }
@@ -342,14 +258,14 @@ async function assignTaskToUser(taskKey, accountId) {
   try {
     // Kullanıcının aktif task'larını kontrol et
     const activeTaskCheck = await hasActiveTask(accountId);
-    
+
     if (activeTaskCheck.hasActive) {
-      const taskList = activeTaskCheck.tasks.join('\n');
+      const taskList = activeTaskCheck.tasks.join("\n");
       logger.warn(`Kullanıcının üzerinde aktif task'lar var:\n${taskList}`);
       return {
         success: false,
-        error: 'Kullanıcının üzerinde aktif task\'lar var',
-        activeTasks: activeTaskCheck.tasks
+        error: "Kullanıcının üzerinde aktif task'lar var",
+        activeTasks: activeTaskCheck.tasks,
       };
     }
 
@@ -364,7 +280,7 @@ async function assignTaskToUser(taskKey, accountId) {
     );
     logger.info(`Task ${taskKey} başarıyla ${accountId} kullanıcısına atandı.`);
     return {
-      success: true
+      success: true,
     };
   } catch (error) {
     logger.error(
@@ -374,7 +290,7 @@ async function assignTaskToUser(taskKey, accountId) {
     );
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -483,7 +399,7 @@ ipcMain.on(
 );
 
 module.exports = {
-  getLeaderboard,
+  getProjectUsers,
   getUserAllTasks,
   getUnassignedTasks,
   assignTaskToUser,

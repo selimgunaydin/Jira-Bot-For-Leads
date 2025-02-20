@@ -32,7 +32,8 @@ jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL") || "";
 email.value = localStorage.getItem("EMAIL") || "";
 apiToken.value = localStorage.getItem("API_TOKEN") || "";
 projectKey.value = localStorage.getItem("PROJECT_KEY") || "S1";
-taskStatus.value = localStorage.getItem("TASK_STATUS") || "Selected for Development";
+taskStatus.value =
+  localStorage.getItem("TASK_STATUS") || "Selected for Development";
 excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS") || "";
 
 const configInputs = [
@@ -82,82 +83,6 @@ ipcRenderer.on("log-message", (event, message) => {
   logs.scrollTop = logs.scrollHeight;
 });
 
-// Leaderboard operations
-const refreshLeaderboardBtn = document.getElementById("refreshLeaderboard");
-const leaderboardList = document.getElementById("leaderboardList");
-
-async function updateLeaderboard() {
-  leaderboardList.innerHTML =
-    '<div class="text-center text-gray-500">Loading...</div>';
-  ipcRenderer.send("get-leaderboard");
-}
-
-ipcRenderer.on("leaderboard-data", (event, data) => {
-  if (!data || data.length === 0) {
-    leaderboardList.innerHTML =
-      '<div class="text-center text-gray-500">No data found</div>';
-    return;
-  }
-
-  leaderboardList.innerHTML = data
-    .map(
-      (user, index) => `
-    <div id="leaderboard-item" data-email="${
-      user.email
-    }" class="flex items-center space-x-4 p-3 ${
-        index < 3 ? "bg-gray-50" : ""
-      } rounded-lg">
-      <div class="flex-shrink-0 relative">
-        <img src="${user.avatarUrl}" alt="${
-        user.displayName
-      }" class="w-10 h-10 rounded-full">
-        ${
-          index < 3
-            ? `
-          <div class="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full ${
-            index === 0
-              ? "bg-yellow-400"
-              : index === 1
-              ? "bg-gray-300"
-              : "bg-yellow-600"
-          } text-white text-xs font-bold">
-            ${index + 1}
-          </div>
-        `
-            : ""
-        }
-      </div>
-      <div class="flex-grow">
-        <div class="font-medium text-gray-900">${user.displayName}</div>
-        <div class="text-sm text-gray-500">Done: ${
-          user.completedTaskCount
-        } tasks, ${user.totalPoints} points</div>
-        <div class="text-sm text-gray-500">All: ${user.totalTaskCount} tasks, ${
-        user.allTaskTotalPoint
-      } points</div>
-        <div class="text-sm text-gray-500">Points/Task Ratio: ${(
-          user.allTaskTotalPoint / user.totalTaskCount
-        ).toFixed(2)}</div>
-      </div>
-      <div class="text-lg font-semibold ${
-        index === 0
-          ? "text-yellow-500"
-          : index === 1
-          ? "text-gray-500"
-          : index === 2
-          ? "text-yellow-700"
-          : "text-gray-700"
-      }">
-        #${index + 1}
-      </div>
-    </div>
-  `
-    )
-    .join("");
-});
-
-refreshLeaderboardBtn.addEventListener("click", updateLeaderboard);
-
 // Task assignment elements
 const assigneeUser = document.getElementById("assigneeUser");
 const taskToAssign = document.getElementById("taskToAssign");
@@ -202,7 +127,9 @@ ipcRenderer.on("project-users-data", (event, users) => {
     users.forEach((user) => {
       const option = document.createElement("option");
       option.value = user.accountId;
-      option.textContent = `${user.displayName} ${user.hasInProgressTasks ? '(🔄 In Progress)' : '(✅ Available)'}`;
+      option.textContent = `${user.displayName} ${
+        user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"
+      }`;
       assigneeUser.appendChild(option);
     });
   } catch (error) {
@@ -279,8 +206,10 @@ ipcRenderer.on("task-assigned", (event, result) => {
     updateTaskList();
   } else {
     if (result.activeTasks && result.activeTasks.length > 0) {
-      const taskList = result.activeTasks.join('\n');
-      alert(`Kullanıcının üzerinde aktif task'lar olduğu için atama yapılamadı.\n\nAktif Task'lar:\n${taskList}`);
+      const taskList = result.activeTasks.join("\n");
+      alert(
+        `Kullanıcının üzerinde aktif task'lar olduğu için atama yapılamadı.\n\nAktif Task'lar:\n${taskList}`
+      );
     } else {
       alert(result.error || "Task atama işlemi başarısız oldu!");
     }
@@ -289,7 +218,6 @@ ipcRenderer.on("task-assigned", (event, result) => {
 
 // Update lists on page load
 window.addEventListener("load", () => {
-  updateLeaderboard();
   updateUserList();
   updateTaskList();
 });

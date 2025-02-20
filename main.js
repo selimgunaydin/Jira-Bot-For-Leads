@@ -1,8 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
-
-const {
-  getLeaderboard,
-} = require("./script/jira");
+require("./script/jira");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -31,16 +28,5 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
-  }
-});
-
-// Leaderboard operations
-ipcMain.on("get-leaderboard", async (event) => {
-  try {
-    const leaderboardData = await getLeaderboard();
-    event.reply("leaderboard-data", leaderboardData);
-  } catch (error) {
-    console.error("Error while fetching leaderboard data:", error);
-    event.reply("leaderboard-data", []);
   }
 });
