@@ -45,7 +45,6 @@ const configInputs = [
   apiToken,
   accountId,
   projectKey,
-  assignmentPriority,
   taskStatus,
 ];
 configInputs.forEach((input) => {
@@ -88,7 +87,6 @@ window.addEventListener("load", () => {
     API_TOKEN: apiToken.value,
     YOUR_ACCOUNT_ID: accountId.value,
     PROJECT_KEY: projectKey.value,
-    ASSIGNMENT_PRIORITY: assignmentPriority.value,
     TASK_STATUS: taskStatus.value,
     TEST_MODE: testMode.checked,
   });
