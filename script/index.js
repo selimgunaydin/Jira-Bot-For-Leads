@@ -153,12 +153,6 @@ ipcRenderer.on("leaderboard-data", (event, data) => {
 
 refreshLeaderboardBtn.addEventListener("click", updateLeaderboard);
 
-// Update leaderboard on page load and every 5 minutes
-window.addEventListener("load", () => {
-  updateLeaderboard();
-  setInterval(updateLeaderboard, 5 * 60 * 1000);
-});
-
 // Task assignment elements
 const assigneeUser = document.getElementById("assigneeUser");
 const taskToAssign = document.getElementById("taskToAssign");
