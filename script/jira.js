@@ -129,7 +129,7 @@ async function getProjectUsers() {
     }
 
     logger.info(`Toplam ${activeUsers.length} aktif kullanıcı bulundu`);
-    logger.info('Leaderboard hesaplanıyor...')
+    logger.info("Leaderboard hesaplanıyor...");
     return activeUsers;
   } catch (error) {
     logger.error(
@@ -259,9 +259,11 @@ async function getLeaderboard() {
 async function getUnassignedTasks() {
   try {
     const jqlQuery = `project = "${PROJECT_KEY}" AND status = "${TASK_STATUS}" AND assignee is EMPTY ORDER BY created DESC`;
-    
+
     const response = await axios.get(
-      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=100`,
+      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(
+        jqlQuery
+      )}&maxResults=100`,
       {
         auth: { username: EMAIL, password: API_TOKEN },
       }
@@ -269,7 +271,11 @@ async function getUnassignedTasks() {
 
     return response.data.issues;
   } catch (error) {
-    logger.error(`Hata oluştu (atanmamış taskları çekme): ${error.response ? JSON.stringify(error.response.data) : error.message}`);
+    logger.error(
+      `Hata oluştu (atanmamış taskları çekme): ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
     return [];
   }
 }
@@ -279,7 +285,7 @@ async function assignTaskToUser(taskKey, accountId) {
     await axios.put(
       `${JIRA_BASE_URL}/rest/api/3/issue/${taskKey}/assignee`,
       {
-        accountId: accountId
+        accountId: accountId,
       },
       {
         auth: { username: EMAIL, password: API_TOKEN },
@@ -288,7 +294,11 @@ async function assignTaskToUser(taskKey, accountId) {
     logger.info(`Task ${taskKey} başarıyla ${accountId} kullanıcısına atandı.`);
     return true;
   } catch (error) {
-    logger.error(`Hata oluştu (task atama): ${error.response ? JSON.stringify(error.response.data) : error.message}`);
+    logger.error(
+      `Hata oluştu (task atama): ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
     return false;
   }
 }
@@ -301,7 +311,7 @@ async function getRandomUser(users) {
   return users[randomIndex];
 }
 
-async function getUserWithLowestPoints(users, type = 'done') {
+async function getUserWithLowestPoints(users, type = "done") {
   if (!users || users.length === 0) {
     return null;
   }
@@ -313,10 +323,13 @@ async function getUserWithLowestPoints(users, type = 'done') {
     const tasks = await getUserAllTasks(user.accountId);
     let points = 0;
 
-    if (type === 'done') {
+    if (type === "done") {
       // Sadece Done durumundaki taskların puanlarını topla
       points = tasks.reduce((sum, task) => {
-        if (task.fields.status.name === 'Done' && task.fields.customfield_10028) {
+        if (
+          task.fields.status.name === "Done" &&
+          task.fields.customfield_10028
+        ) {
           return sum + task.fields.customfield_10028;
         }
         return sum;
@@ -358,37 +371,40 @@ ipcMain.on("get-unassigned-tasks", async (event) => {
   }
 });
 
-ipcMain.on("assign-task", async (event, { taskKey, assignmentType, selectedUserId }) => {
-  try {
-    const users = await getProjectUsers();
-    let selectedUser = null;
+ipcMain.on(
+  "assign-task",
+  async (event, { taskKey, assignmentType, selectedUserId }) => {
+    try {
+      const users = await getProjectUsers();
+      let selectedUser = null;
 
-    switch (assignmentType) {
-      case 'specific':
-        selectedUser = users.find(u => u.accountId === selectedUserId);
-        break;
-      case 'random':
-        selectedUser = await getRandomUser(users);
-        break;
-      case 'lowest_done':
-        selectedUser = await getUserWithLowestPoints(users, 'done');
-        break;
-      case 'lowest_total':
-        selectedUser = await getUserWithLowestPoints(users, 'total');
-        break;
+      switch (assignmentType) {
+        case "specific":
+          selectedUser = users.find((u) => u.accountId === selectedUserId);
+          break;
+        case "random":
+          selectedUser = await getRandomUser(users);
+          break;
+        case "lowest_done":
+          selectedUser = await getUserWithLowestPoints(users, "done");
+          break;
+        case "lowest_total":
+          selectedUser = await getUserWithLowestPoints(users, "total");
+          break;
+      }
+
+      if (!selectedUser) {
+        throw new Error("Kullanıcı bulunamadı");
+      }
+
+      const success = await assignTaskToUser(taskKey, selectedUser.accountId);
+      event.reply("task-assigned", { success, selectedUser });
+    } catch (error) {
+      logger.error(`Task atama işlemi başarısız oldu: ${error.message}`);
+      event.reply("task-assigned", { success: false, error: error.message });
     }
-
-    if (!selectedUser) {
-      throw new Error('Kullanıcı bulunamadı');
-    }
-
-    const success = await assignTaskToUser(taskKey, selectedUser.accountId);
-    event.reply("task-assigned", { success, selectedUser });
-  } catch (error) {
-    logger.error(`Task atama işlemi başarısız oldu: ${error.message}`);
-    event.reply("task-assigned", { success: false, error: error.message });
   }
-});
+);
 
 module.exports = {
   getLeaderboard,

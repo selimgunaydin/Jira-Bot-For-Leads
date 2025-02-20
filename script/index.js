@@ -108,154 +108,20 @@ excludedTasksList.addEventListener("input", () => {
   ipcRenderer.send("update-excluded-tasks", excludedTasksList.value);
 });
 
-// Aylık task listelerini güncelle
-async function updateMonthlyTaskLists() {
-  const doneTasksList = document.getElementById("doneTasksList");
-  const allTasksList = document.getElementById("allTasksList");
-
-  // Done taskları getir
-  ipcRenderer.send("get-monthly-done-tasks");
-  ipcRenderer.once("monthly-done-tasks", (event, tasks) => {
-    const totalPoints = tasks.reduce(
-      (sum, task) => sum + (task.fields.customfield_10028 || 0),
-      0
-    );
-
-    doneTasksList.innerHTML = `
-      <div class="mb-4 text-right">
-        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-          Toplam Puan: ${totalPoints}
-        </span>
-      </div>
-      ${
-        tasks.length > 0
-          ? tasks
-              .map(
-                (task) => `
-            <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-              <div class="flex justify-between items-start">
-                <div class="flex items-center space-x-2">
-                  <a href="#" data-url="${jiraBaseUrl.value}/browse/${
-                  task.key
-                }" class="text-blue-600 hover:text-blue-800 font-medium jira-link">
-                    ${task.key}
-                  </a>
-                  ${
-                    task.fields.customfield_10028
-                      ? `<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
-                      ${task.fields.customfield_10028} puan
-                    </span>`
-                      : ""
-                  }
-                </div>
-                <span class="text-sm text-gray-500">
-                  ${new Date(task.fields.updated).toLocaleDateString("tr-TR")}
-                </span>
-              </div>
-              <p class="text-sm text-gray-700 mt-1">${task.fields.summary}</p>
-            </div>
-          `
-              )
-              .join("")
-          : '<p class="text-gray-500 text-center">Bu ay tamamlanan task bulunamadı.</p>'
-      }`;
-
-    // Link tıklama olaylarını ekle
-    doneTasksList.querySelectorAll(".jira-link").forEach((link) => {
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        ipcRenderer.send("open-in-chrome", e.target.dataset.url);
-      });
-    });
-  });
-
-  // Tüm taskları getir
-  ipcRenderer.send("get-monthly-all-tasks");
-  ipcRenderer.once("monthly-all-tasks", (event, tasks) => {
-    const totalPoints = tasks.reduce(
-      (sum, task) => sum + (task.fields.customfield_10028 || 0),
-      0
-    );
-
-    allTasksList.innerHTML = `
-      <div class="mb-4 text-right">
-        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-          Toplam Puan: ${totalPoints}
-        </span>
-      </div>
-      ${
-        tasks.length > 0
-          ? tasks
-              .map(
-                (task) => `
-            <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-              <div class="flex justify-between items-start">
-                <div class="flex items-center space-x-2">
-                  <a href="#" data-url="${jiraBaseUrl.value}/browse/${
-                  task.key
-                }" class="text-blue-600 hover:text-blue-800 font-medium jira-link">
-                    ${task.key}
-                  </a>
-                  ${
-                    task.fields.customfield_10028
-                      ? `<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
-                      ${task.fields.customfield_10028} puan
-                    </span>`
-                      : ""
-                  }
-                </div>
-                <span class="text-sm text-gray-500">
-                  ${new Date(task.fields.updated).toLocaleDateString("tr-TR")}
-                </span>
-              </div>
-              <p class="text-sm text-gray-700 mt-1">${task.fields.summary}</p>
-              <span class="inline-block px-2 py-1 text-xs rounded mt-2 ${
-                task.fields.status.name === "Done"
-                  ? "bg-green-100 text-green-800"
-                  : task.fields.status.name === "In Progress"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-gray-100 text-gray-800"
-              }">
-                ${task.fields.status.name}
-              </span>
-            </div>
-          `
-              )
-              .join("")
-          : '<p class="text-gray-500 text-center">Bu ay task bulunamadı.</p>'
-      }`;
-
-    // Link tıklama olaylarını ekle
-    allTasksList.querySelectorAll(".jira-link").forEach((link) => {
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        ipcRenderer.send("open-in-chrome", e.target.dataset.url);
-      });
-    });
-  });
-}
-
-// Sayfa yüklendiğinde ve her 5 dakikada bir task listelerini güncelle
-window.addEventListener("load", updateMonthlyTaskLists);
-setInterval(updateMonthlyTaskLists, 5 * 60 * 1000);
-
-// Task atandığında listeleri güncelle
-ipcRenderer.on("task-assigned", updateMonthlyTaskLists);
-
-// Leaderboard işlemleri
+// Leaderboard operations
 const refreshLeaderboardBtn = document.getElementById("refreshLeaderboard");
 const leaderboardList = document.getElementById("leaderboardList");
 
 async function updateLeaderboard() {
   leaderboardList.innerHTML =
-    '<div class="text-center text-gray-500">Yükleniyor...</div>';
+    '<div class="text-center text-gray-500">Loading...</div>';
   ipcRenderer.send("get-leaderboard");
 }
 
 ipcRenderer.on("leaderboard-data", (event, data) => {
   if (!data || data.length === 0) {
     leaderboardList.innerHTML =
-      '<div class="text-center text-gray-500">Veri bulunamadı</div>';
+      '<div class="text-center text-gray-500">No data found</div>';
     return;
   }
 
@@ -291,11 +157,11 @@ ipcRenderer.on("leaderboard-data", (event, data) => {
         <div class="font-medium text-gray-900">${user.displayName}</div>
         <div class="text-sm text-gray-500">Done: ${
           user.completedTaskCount
-        } task, ${user.totalPoints} puan</div>
-        <div class="text-sm text-gray-500">All: ${user.totalTaskCount} task, ${
+        } tasks, ${user.totalPoints} points</div>
+        <div class="text-sm text-gray-500">All: ${user.totalTaskCount} tasks, ${
         user.allTaskTotalPoint
-      } puan</div>
-        <div class="text-sm text-gray-500">Puan/Task Oranı: ${(
+      } points</div>
+        <div class="text-sm text-gray-500">Points/Task Ratio: ${(
           user.allTaskTotalPoint / user.totalTaskCount
         ).toFixed(2)}</div>
       </div>
@@ -318,14 +184,13 @@ ipcRenderer.on("leaderboard-data", (event, data) => {
 
 refreshLeaderboardBtn.addEventListener("click", updateLeaderboard);
 
-// Sayfa yüklendiğinde leaderboard'u güncelle
+// Update leaderboard on page load and every 5 minutes
 window.addEventListener("load", () => {
   updateLeaderboard();
-  // Her 5 dakikada bir otomatik güncelle
   setInterval(updateLeaderboard, 5 * 60 * 1000);
 });
 
-// Task atama ile ilgili elementler
+// Task assignment elements
 const assigneeUser = document.getElementById("assigneeUser");
 const taskToAssign = document.getElementById("taskToAssign");
 const assignmentType = document.getElementById("assignmentType");
@@ -333,123 +198,124 @@ const assignTask = document.getElementById("assignTask");
 const refreshTaskAssignment = document.getElementById("refreshTaskAssignment");
 const userSelectContainer = document.getElementById("userSelectContainer");
 
-// Kullanıcı listesini güncelle
+// Update user list
 async function updateUserList() {
   ipcRenderer.send("get-project-users");
 }
 
-// Task listesini güncelle
+// Update task list
 async function updateTaskList() {
   ipcRenderer.send("get-unassigned-tasks");
 }
 
-// Task atama alanını yenile
+// Refresh task assignment area
 function refreshTaskAssignmentArea() {
-  // Refresh butonuna animasyon ekle
-  refreshTaskAssignment.classList.add('animate-spin');
-  
-  // Listeleri güncelle
+  // Add animation to refresh button
+  refreshTaskAssignment.classList.add("animate-spin");
+
+  // Update lists
   updateUserList();
   updateTaskList();
-  
-  // 1 saniye sonra animasyonu kaldır
+
+  // Remove animation after 1 second
   setTimeout(() => {
-    refreshTaskAssignment.classList.remove('animate-spin');
+    refreshTaskAssignment.classList.remove("animate-spin");
   }, 1000);
 }
 
-// Refresh butonuna tıklama olayı ekle
-refreshTaskAssignment.addEventListener('click', refreshTaskAssignmentArea);
+// Add click event to refresh button
+refreshTaskAssignment.addEventListener("click", refreshTaskAssignmentArea);
 
 // IPC Event Listeners
 ipcRenderer.on("project-users-data", (event, users) => {
   try {
-    assigneeUser.innerHTML = '<option value="">Kullanıcı seçin (opsiyonel)</option>';
-    users.forEach(user => {
-      const option = document.createElement('option');
+    assigneeUser.innerHTML =
+      '<option value="">Select a user (optional)</option>';
+    users.forEach((user) => {
+      const option = document.createElement("option");
       option.value = user.accountId;
       option.textContent = user.displayName;
       assigneeUser.appendChild(option);
     });
   } catch (error) {
-    console.error("Kullanıcı listesi güncellenirken hata oluştu:", error);
+    console.error("Error updating user list:", error);
   }
 });
 
 ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
   try {
-    taskToAssign.innerHTML = '<option value="">Task seçin</option>';
-    tasks.forEach(task => {
-      const option = document.createElement('option');
+    taskToAssign.innerHTML = '<option value="">Select a task</option>';
+    tasks.forEach((task) => {
+      const option = document.createElement("option");
       option.value = task.key;
       option.textContent = `${task.key}: ${task.fields.summary}`;
       taskToAssign.appendChild(option);
     });
   } catch (error) {
-    console.error("Task listesi güncellenirken hata oluştu:", error);
+    console.error("Error updating task list:", error);
   }
 });
 
-// Atama türü değiştiğinde kullanıcı seçimini güncelle
-assignmentType.addEventListener('change', () => {
-  if (assignmentType.value === 'specific') {
-    userSelectContainer.classList.remove('hidden');
+// Update user selection when assignment type changes
+assignmentType.addEventListener("change", () => {
+  if (assignmentType.value === "specific") {
+    userSelectContainer.classList.remove("hidden");
     assigneeUser.disabled = false;
     assigneeUser.required = true;
   } else {
-    userSelectContainer.classList.add('hidden');
+    userSelectContainer.classList.add("hidden");
     assigneeUser.disabled = true;
     assigneeUser.required = false;
-    assigneeUser.value = '';
+    assigneeUser.value = "";
   }
 });
 
-// Task atama işlemi
-assignTask.addEventListener('click', () => {
-  // Buton zaten devre dışıysa işlemi durdur
+// Task assignment process
+assignTask.addEventListener("click", () => {
+  // Stop if button is already disabled
   if (assignTask.disabled) {
     return;
   }
 
   if (!taskToAssign.value) {
-    alert('Lütfen bir task seçin!');
+    alert("Please select a task!");
     return;
   }
 
-  if (assignmentType.value === 'specific' && !assigneeUser.value) {
-    alert('Lütfen bir kullanıcı seçin!');
+  if (assignmentType.value === "specific" && !assigneeUser.value) {
+    alert("Please select a user!");
     return;
   }
 
-  // Butonu devre dışı bırak ve görsel feedback ekle
+  // Disable button and add visual feedback
   assignTask.disabled = true;
-  assignTask.classList.add('opacity-50', 'cursor-not-allowed');
-  assignTask.textContent = 'İşlem Yapılıyor...';
+  assignTask.classList.add("opacity-50", "cursor-not-allowed");
+  assignTask.textContent = "Processing...";
 
   ipcRenderer.send("assign-task", {
     taskKey: taskToAssign.value,
     assignmentType: assignmentType.value,
-    selectedUserId: assigneeUser.value
+    selectedUserId: assigneeUser.value,
   });
 });
 
-// Task atama sonucu listener'ı
+// Task assignment result listener
 ipcRenderer.on("task-assigned", (event, result) => {
-  // Butonu tekrar aktif et ve görsel feedback'i kaldır
+  // Re-enable button and remove visual feedback
   assignTask.disabled = false;
-  assignTask.classList.remove('opacity-50', 'cursor-not-allowed');
-  assignTask.textContent = 'İşlemi Başlat';
+  assignTask.classList.remove("opacity-50", "cursor-not-allowed");
+  assignTask.textContent = "Start Process";
 
   if (result.success) {
-    alert(`Task başarıyla ${result.selectedUser.displayName} kullanıcısına atandı!`);
+    alert(`Task successfully assigned to ${result.selectedUser.displayName}!`);
     updateTaskList();
   } else {
-    alert(result.error || 'Task atama işlemi başarısız oldu!');
+    alert(result.error || "Task assignment failed!");
   }
 });
 
-// Sayfa yüklendiğinde listeleri güncelle
-window.addEventListener('load', () => {
+// Update lists on page load
+window.addEventListener("load", () => {
   updateUserList();
   updateTaskList();
 });
