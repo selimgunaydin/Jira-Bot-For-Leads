@@ -324,3 +324,132 @@ window.addEventListener("load", () => {
   // Her 5 dakikada bir otomatik güncelle
   setInterval(updateLeaderboard, 5 * 60 * 1000);
 });
+
+// Task atama ile ilgili elementler
+const assigneeUser = document.getElementById("assigneeUser");
+const taskToAssign = document.getElementById("taskToAssign");
+const assignmentType = document.getElementById("assignmentType");
+const assignTask = document.getElementById("assignTask");
+const refreshTaskAssignment = document.getElementById("refreshTaskAssignment");
+const userSelectContainer = document.getElementById("userSelectContainer");
+
+// Kullanıcı listesini güncelle
+async function updateUserList() {
+  ipcRenderer.send("get-project-users");
+}
+
+// Task listesini güncelle
+async function updateTaskList() {
+  ipcRenderer.send("get-unassigned-tasks");
+}
+
+// Task atama alanını yenile
+function refreshTaskAssignmentArea() {
+  // Refresh butonuna animasyon ekle
+  refreshTaskAssignment.classList.add('animate-spin');
+  
+  // Listeleri güncelle
+  updateUserList();
+  updateTaskList();
+  
+  // 1 saniye sonra animasyonu kaldır
+  setTimeout(() => {
+    refreshTaskAssignment.classList.remove('animate-spin');
+  }, 1000);
+}
+
+// Refresh butonuna tıklama olayı ekle
+refreshTaskAssignment.addEventListener('click', refreshTaskAssignmentArea);
+
+// IPC Event Listeners
+ipcRenderer.on("project-users-data", (event, users) => {
+  try {
+    assigneeUser.innerHTML = '<option value="">Kullanıcı seçin (opsiyonel)</option>';
+    users.forEach(user => {
+      const option = document.createElement('option');
+      option.value = user.accountId;
+      option.textContent = user.displayName;
+      assigneeUser.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Kullanıcı listesi güncellenirken hata oluştu:", error);
+  }
+});
+
+ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
+  try {
+    taskToAssign.innerHTML = '<option value="">Task seçin</option>';
+    tasks.forEach(task => {
+      const option = document.createElement('option');
+      option.value = task.key;
+      option.textContent = `${task.key}: ${task.fields.summary}`;
+      taskToAssign.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Task listesi güncellenirken hata oluştu:", error);
+  }
+});
+
+// Atama türü değiştiğinde kullanıcı seçimini güncelle
+assignmentType.addEventListener('change', () => {
+  if (assignmentType.value === 'specific') {
+    userSelectContainer.classList.remove('hidden');
+    assigneeUser.disabled = false;
+    assigneeUser.required = true;
+  } else {
+    userSelectContainer.classList.add('hidden');
+    assigneeUser.disabled = true;
+    assigneeUser.required = false;
+    assigneeUser.value = '';
+  }
+});
+
+// Task atama işlemi
+assignTask.addEventListener('click', () => {
+  // Buton zaten devre dışıysa işlemi durdur
+  if (assignTask.disabled) {
+    return;
+  }
+
+  if (!taskToAssign.value) {
+    alert('Lütfen bir task seçin!');
+    return;
+  }
+
+  if (assignmentType.value === 'specific' && !assigneeUser.value) {
+    alert('Lütfen bir kullanıcı seçin!');
+    return;
+  }
+
+  // Butonu devre dışı bırak ve görsel feedback ekle
+  assignTask.disabled = true;
+  assignTask.classList.add('opacity-50', 'cursor-not-allowed');
+  assignTask.textContent = 'İşlem Yapılıyor...';
+
+  ipcRenderer.send("assign-task", {
+    taskKey: taskToAssign.value,
+    assignmentType: assignmentType.value,
+    selectedUserId: assigneeUser.value
+  });
+});
+
+// Task atama sonucu listener'ı
+ipcRenderer.on("task-assigned", (event, result) => {
+  // Butonu tekrar aktif et ve görsel feedback'i kaldır
+  assignTask.disabled = false;
+  assignTask.classList.remove('opacity-50', 'cursor-not-allowed');
+  assignTask.textContent = 'İşlemi Başlat';
+
+  if (result.success) {
+    alert(`Task başarıyla ${result.selectedUser.displayName} kullanıcısına atandı!`);
+    updateTaskList();
+  } else {
+    alert(result.error || 'Task atama işlemi başarısız oldu!');
+  }
+});
+
+// Sayfa yüklendiğinde listeleri güncelle
+window.addEventListener('load', () => {
+  updateUserList();
+  updateTaskList();
+});
