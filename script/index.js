@@ -99,6 +99,11 @@ let cachedUsers = [];
 let cachedTasks = [];
 let isUsersLoaded = false;
 let isTasksLoaded = false;
+let userPointsCache = {
+  lowest_done: null,
+  lowest_total: null,
+  random: null
+};
 
 // Buton durumunu kontrol et
 function checkButtonState() {
@@ -139,6 +144,11 @@ function refreshTaskAssignmentArea() {
 // Add click event to refresh button
 refreshTaskAssignment.addEventListener("click", refreshTaskAssignmentArea);
 
+// Kullanıcı puanlarını hesapla
+async function calculateUserPoints() {
+  ipcRenderer.send("calculate-user-points", { users: cachedUsers });
+}
+
 // IPC Event Listeners
 ipcRenderer.on("project-users-data", (event, users) => {
   try {
@@ -156,6 +166,9 @@ ipcRenderer.on("project-users-data", (event, users) => {
     });
     isUsersLoaded = true;
     checkButtonState();
+
+    // Kullanıcı puanlarını hesapla
+    calculateUserPoints();
   } catch (error) {
     console.error("Error updating user list:", error);
   }
@@ -178,6 +191,14 @@ ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
   } catch (error) {
     console.error("Error updating task list:", error);
   }
+});
+
+// Kullanıcı puanları hesaplandığında
+ipcRenderer.on("user-points-calculated", (event, data) => {
+  userPointsCache = {
+    ...data,
+    random: data.random || cachedUsers[Math.floor(Math.random() * cachedUsers.length)]
+  };
 });
 
 // Update user selection when assignment type changes
@@ -224,7 +245,7 @@ assignTask.addEventListener("click", () => {
   if (assignmentType.value !== "specific") {
     const user = userPointsCache[assignmentType.value];
     if (!user) {
-      alert("Kullanıcı puanları henüz hesaplanmadı!");
+      alert("Kullanıcı puanları henüz hesaplanmadı, lütfen sayfayı yenileyin!");
       return;
     }
     selectedUserId = user.accountId;

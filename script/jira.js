@@ -415,6 +415,64 @@ async function getUserWithLowestPoints(users, type = "done") {
   return lowestPointsUser;
 }
 
+// Kullanıcı puanlarını hesapla
+async function calculateUserPoints(users) {
+  try {
+    let lowestDoneUser = null;
+    let lowestTotalUser = null;
+    let lowestDonePoints = Infinity;
+    let lowestTotalPoints = Infinity;
+
+    for (const user of users) {
+      if (user.hasInProgressTasks) continue; // Aktif task'ı olan kullanıcıları atla
+
+      const tasks = await getUserAllTasks(user.accountId);
+      let donePoints = 0;
+      let totalPoints = 0;
+
+      tasks.forEach(task => {
+        const points = task.fields.customfield_10028 || 0;
+        totalPoints += points;
+        
+        if (task.fields.status.name === "Done") {
+          donePoints += points;
+        }
+      });
+
+      logger.info(`${user.displayName} - Done Points: ${donePoints}, Total Points: ${totalPoints}`);
+
+      if (donePoints < lowestDonePoints) {
+        lowestDonePoints = donePoints;
+        lowestDoneUser = user;
+      }
+
+      if (totalPoints < lowestTotalPoints) {
+        lowestTotalPoints = totalPoints;
+        lowestTotalUser = user;
+      }
+    }
+
+    // Sonuçları logla
+    if (lowestDoneUser) {
+      logger.info(`En düşük Done puanlı kullanıcı: ${lowestDoneUser.displayName} (${lowestDonePoints} puan)`);
+    }
+    if (lowestTotalUser) {
+      logger.info(`En düşük Total puanlı kullanıcı: ${lowestTotalUser.displayName} (${lowestTotalPoints} puan)`);
+    }
+
+    return {
+      lowest_done: lowestDoneUser,
+      lowest_total: lowestTotalUser
+    };
+  } catch (error) {
+    logger.error(`Kullanıcı puanları hesaplanırken hata oluştu: ${error.message}`);
+    return {
+      lowest_done: null,
+      lowest_total: null
+    };
+  }
+}
+
 // IPC Event Listeners
 ipcMain.on("get-project-users", async (event) => {
   try {
@@ -478,7 +536,7 @@ ipcMain.on("assign-task", async (event, data) => {
       logger.info("=== TEST MODU ===");
     } else {
       // Gerçek atama işlemi
-      result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
+      //result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
     }
     
     if (result.success) {
@@ -508,6 +566,21 @@ ipcMain.on("assign-task", async (event, data) => {
     event.reply("task-assigned", {
       success: false,
       message: "Task atama işlemi başarısız oldu.",
+    });
+  }
+});
+
+ipcMain.on("calculate-user-points", async (event, { users }) => {
+  try {
+    logger.info("Kullanıcı puanları hesaplanıyor...");
+    const userPoints = await calculateUserPoints(users);
+    logger.info("Kullanıcı puanları hesaplandı.");
+    event.reply("user-points-calculated", userPoints);
+  } catch (error) {
+    logger.error(`Kullanıcı puanları hesaplanırken hata oluştu: ${error.message}`);
+    event.reply("user-points-calculated", {
+      lowest_done: null,
+      lowest_total: null
     });
   }
 });
