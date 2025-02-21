@@ -180,16 +180,16 @@ function showTargetPointsModal() {
     cachedUsers.forEach(user => {
         const savedTarget = localStorage.getItem(`targetPoints-${user.emailAddress}`) || 0;
         const userDiv = document.createElement('div');
-        userDiv.className = 'mb-4';
+        userDiv.className = 'p-4 bg-gray-50 rounded-lg';
         userDiv.innerHTML = `
-            <label class="block text-sm font-medium text-gray-700 mb-1">${user.displayName}</label>
-            <div class="flex space-x-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">${user.displayName}</label>
+            <div class="flex items-center space-x-2">
                 <input type="number" 
-                       class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring" 
+                       class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" 
                        value="${savedTarget}"
                        data-email="${user.emailAddress}"
                        min="0">
-                <span class="text-sm text-gray-500 py-2">puan/ay</span>
+                <span class="text-sm text-gray-500 whitespace-nowrap">puan/ay</span>
             </div>
         `;
         targetPointsContent.appendChild(userDiv);
