@@ -460,8 +460,14 @@ async function calculateUserPoints(users) {
     // Ay başından bugüne kadar olan iş günü sayısı
     let workDaysUntilToday = 0;
     let currentDay = new Date(firstDayOfMonth);
-    while (currentDay <= today) {
-      if (currentDay.getDay() !== 0 && currentDay.getDay() !== 6) { // 0=Pazar, 6=Cumartesi
+
+    // Bugünün başlangıcını al (saat 00:00:00)
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // Ay başından bugüne kadar olan iş günlerini say
+    while (currentDay <= todayStart) {
+      const dayOfWeek = currentDay.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0=Pazar, 6=Cumartesi
         workDaysUntilToday++;
       }
       currentDay.setDate(currentDay.getDate() + 1);
@@ -471,7 +477,8 @@ async function calculateUserPoints(users) {
     let totalWorkDays = 0;
     currentDay = new Date(firstDayOfMonth);
     while (currentDay <= lastDayOfMonth) {
-      if (currentDay.getDay() !== 0 && currentDay.getDay() !== 6) {
+      const dayOfWeek = currentDay.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         totalWorkDays++;
       }
       currentDay.setDate(currentDay.getDate() + 1);
@@ -480,7 +487,7 @@ async function calculateUserPoints(users) {
     // Beklenen tamamlanma oranı (iş günü bazlı)
     const expectedCompletionRatio = (workDaysUntilToday / totalWorkDays) * 100;
 
-    logger.info("=== developer Puanları Hesaplanıyor ===");
+    logger.info("=== Developer Puanları Hesaplanıyor ===");
     logger.info(`Ay içindeki toplam iş günü: ${totalWorkDays}`);
     logger.info(`Bugüne kadar geçen iş günü: ${workDaysUntilToday}`);
     logger.info(`Beklenen tamamlanma oranı: ${expectedCompletionRatio.toFixed(1)}%\n`);
