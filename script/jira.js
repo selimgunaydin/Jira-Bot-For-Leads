@@ -536,7 +536,7 @@ ipcMain.on("assign-task", async (event, data) => {
       logger.info("=== TEST MODU ===");
     } else {
       // Gerçek atama işlemi
-      //result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
+      result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
     }
     
     if (result.success) {
