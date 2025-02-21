@@ -91,13 +91,30 @@ const assignTask = document.getElementById("assignTask");
 const refreshTaskAssignment = document.getElementById("refreshTaskAssignment");
 const userSelectContainer = document.getElementById("userSelectContainer");
 
+// Global değişkenler
+let cachedUsers = [];
+let cachedTasks = [];
+let isUsersLoaded = false;
+let isTasksLoaded = false;
+
+// Buton durumunu kontrol et
+function checkButtonState() {
+  assignTask.disabled = !(isUsersLoaded && isTasksLoaded);
+  assignTask.classList.toggle("opacity-50", !isUsersLoaded || !isTasksLoaded);
+  assignTask.classList.toggle("cursor-not-allowed", !isUsersLoaded || !isTasksLoaded);
+}
+
 // Update user list
 async function updateUserList() {
+  isUsersLoaded = false;
+  checkButtonState();
   ipcRenderer.send("get-project-users");
 }
 
 // Update task list
 async function updateTaskList() {
+  isTasksLoaded = false;
+  checkButtonState();
   ipcRenderer.send("get-unassigned-tasks");
 }
 
@@ -122,8 +139,10 @@ refreshTaskAssignment.addEventListener("click", refreshTaskAssignmentArea);
 // IPC Event Listeners
 ipcRenderer.on("project-users-data", (event, users) => {
   try {
-    assigneeUser.innerHTML =
-      '<option value="">Select a user (optional)</option>';
+    // Cache users
+    cachedUsers = users;
+    
+    assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
     users.forEach((user) => {
       const option = document.createElement("option");
       option.value = user.accountId;
@@ -132,6 +151,8 @@ ipcRenderer.on("project-users-data", (event, users) => {
       }`;
       assigneeUser.appendChild(option);
     });
+    isUsersLoaded = true;
+    checkButtonState();
   } catch (error) {
     console.error("Error updating user list:", error);
   }
@@ -139,6 +160,9 @@ ipcRenderer.on("project-users-data", (event, users) => {
 
 ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
   try {
+    // Cache tasks
+    cachedTasks = tasks;
+    
     taskToAssign.innerHTML = '<option value="">Select a task</option>';
     tasks.forEach((task) => {
       const option = document.createElement("option");
@@ -146,6 +170,8 @@ ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
       option.textContent = `${task.key}: ${task.fields.summary}`;
       taskToAssign.appendChild(option);
     });
+    isTasksLoaded = true;
+    checkButtonState();
   } catch (error) {
     console.error("Error updating task list:", error);
   }
@@ -187,10 +213,13 @@ assignTask.addEventListener("click", () => {
   assignTask.classList.add("opacity-50", "cursor-not-allowed");
   assignTask.textContent = "Processing...";
 
+  // Assign task using cached data
   ipcRenderer.send("assign-task", {
     taskKey: taskToAssign.value,
     assignmentType: assignmentType.value,
     selectedUserId: assigneeUser.value,
+    cachedUsers: cachedUsers, // Cached user listesini gönder
+    cachedTasks: cachedTasks, // Cached task listesini gönder
   });
 });
 

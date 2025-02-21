@@ -362,40 +362,53 @@ ipcMain.on("get-unassigned-tasks", async (event) => {
   }
 });
 
-ipcMain.on(
-  "assign-task",
-  async (event, { taskKey, assignmentType, selectedUserId }) => {
-    try {
-      const users = await getProjectUsers();
-      let selectedUser = null;
+ipcMain.on("assign-task", async (event, data) => {
+  try {
+    const { taskKey, assignmentType, selectedUserId, cachedUsers, cachedTasks } = data;
+    let selectedUser;
 
-      switch (assignmentType) {
-        case "specific":
-          selectedUser = users.find((u) => u.accountId === selectedUserId);
-          break;
-        case "random":
-          selectedUser = await getRandomUser(users);
-          break;
-        case "lowest_done":
-          selectedUser = await getUserWithLowestPoints(users, "done");
-          break;
-        case "lowest_total":
-          selectedUser = await getUserWithLowestPoints(users, "total");
-          break;
-      }
-
-      if (!selectedUser) {
-        throw new Error("Kullanıcı bulunamadı");
-      }
-      logger.info(`Task ${selectedUser.displayName},  ${taskKey} atanıyor...`);
-      // const result = await assignTaskToUser(taskKey, selectedUser.accountId);
-      // event.reply("task-assigned", result);
-    } catch (error) {
-      logger.error(`Task atama işlemi başarısız oldu: ${error.message}`);
-      event.reply("task-assigned", { success: false, error: error.message });
+    if (assignmentType === "specific") {
+      // Cached users listesinden seçilen kullanıcıyı bul
+      selectedUser = cachedUsers.find(user => user.accountId === selectedUserId);
+    } else {
+      // Cached users listesini kullanarak en düşük puanlı kullanıcıyı bul
+      selectedUser = await getUserWithLowestPoints(cachedUsers);
     }
+
+    if (!selectedUser) {
+      logger.error("Kullanıcı bulunamadı!");
+      return;
+    }
+
+    // Task ataması yap
+    //await assignTaskToUser(taskKey, selectedUser.accountId);
+    logger.info(`Task ${taskKey} başarıyla ${selectedUser.displayName} kullanıcısına atandı.`);
+    // Başarılı atama sonrası cached listeleri güncelle
+    const taskIndex = cachedTasks.findIndex(task => task.key === taskKey);
+    if (taskIndex !== -1) {
+      cachedTasks.splice(taskIndex, 1);
+    }
+
+    event.reply("task-assigned", {
+      success: true,
+      message: `Task ${taskKey} başarıyla ${selectedUser.displayName} kullanıcısına atandı.`,
+    });
+
+    // UI'ı güncelle
+    event.reply("unassigned-tasks-data", cachedTasks);
+    event.reply("project-users-data", cachedUsers);
+  } catch (error) {
+    logger.error(
+      `Hata oluştu (task atama): ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
+    event.reply("task-assigned", {
+      success: false,
+      message: "Task atama işlemi başarısız oldu.",
+    });
   }
-);
+});
 
 module.exports = {
   getProjectUsers,
