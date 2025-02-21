@@ -13,6 +13,7 @@ function createWindow() {
 
   global.mainWindow = win;
   win.loadFile("index.html");
+  win.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
