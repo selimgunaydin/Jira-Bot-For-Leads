@@ -99,6 +99,7 @@ let cachedUsers = [];
 let cachedTasks = [];
 let isUsersLoaded = false;
 let isTasksLoaded = false;
+let isCalculating = false;
 let userPointsCache = {
   lowest_done: null,
   lowest_total: null,
@@ -107,9 +108,28 @@ let userPointsCache = {
 
 // Buton durumunu kontrol et
 function checkButtonState() {
-  assignTask.disabled = !(isUsersLoaded && isTasksLoaded);
-  assignTask.classList.toggle("opacity-50", !isUsersLoaded || !isTasksLoaded);
-  assignTask.classList.toggle("cursor-not-allowed", !isUsersLoaded || !isTasksLoaded);
+  const isPointsCalculated = assignmentType.value === "specific" || 
+    (userPointsCache.lowest_done !== null && userPointsCache.lowest_total !== null);
+  
+  const shouldBeEnabled = isUsersLoaded && 
+    isTasksLoaded && 
+    !isCalculating && 
+    isPointsCalculated;
+
+  assignTask.disabled = !shouldBeEnabled;
+  assignTask.classList.toggle("opacity-50", !shouldBeEnabled);
+  assignTask.classList.toggle("cursor-not-allowed", !shouldBeEnabled);
+
+  // Hesaplama durumuna göre buton metnini güncelle
+  if (isCalculating) {
+    assignTask.textContent = "Puanlar Hesaplanıyor...";
+  } else if (!isUsersLoaded || !isTasksLoaded) {
+    assignTask.textContent = "Veriler Yükleniyor...";
+  } else if (!isPointsCalculated && assignmentType.value !== "specific") {
+    assignTask.textContent = "Puanlar Hesaplanmadı";
+  } else {
+    assignTask.textContent = "Start Process";
+  }
 }
 
 // Update user list
@@ -146,6 +166,8 @@ refreshTaskAssignment.addEventListener("click", refreshTaskAssignmentArea);
 
 // Kullanıcı puanlarını hesapla
 async function calculateUserPoints() {
+  isCalculating = true;
+  checkButtonState();
   ipcRenderer.send("calculate-user-points", { users: cachedUsers });
 }
 
@@ -199,6 +221,8 @@ ipcRenderer.on("user-points-calculated", (event, data) => {
     ...data,
     random: data.random || cachedUsers[Math.floor(Math.random() * cachedUsers.length)]
   };
+  isCalculating = false;
+  checkButtonState();
 });
 
 // Update user selection when assignment type changes
@@ -213,6 +237,7 @@ assignmentType.addEventListener("change", () => {
     assigneeUser.required = false;
     assigneeUser.value = "";
   }
+  checkButtonState();
 });
 
 // Test modu değişikliğinde localStorage'a kaydet
