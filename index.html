@@ -306,6 +306,12 @@
                                 class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
                                 Start Process
                             </button>
+
+                            <!-- Selim'e Ata Butonu -->
+                            <button id="assignToSelim"
+                                class="w-full mt-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white py-2 px-4 rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all transform hover:scale-105 flex items-center justify-center space-x-2">
+                                <span>Taskı Selim'e Ata</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -339,6 +345,17 @@
                     Kapat
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Selim Modal -->
+    <div id="selimModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4 text-center">
+            <h2 class="text-2xl font-bold mb-4">Düşünmen Yeter! 🤔</h2>
+            <img src="assets/eyvallah.jpeg" alt="Eyvallah" class="w-full h-auto rounded-lg mb-4">
+            <button id="closeSelimModal" class="text-black border border-black px-6 py-2 rounded hover:bg-black hover:text-white transition-colors">
+                Eyvallah
+            </button>
         </div>
     </div>
 

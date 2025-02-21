@@ -452,3 +452,23 @@ window.addEventListener("load", () => {
   updateUserList();
   updateTaskList();
 });
+
+// Selim'e Ata butonu
+const assignToSelim = document.getElementById("assignToSelim");
+const selimModal = document.getElementById("selimModal");
+const closeSelimModal = document.getElementById("closeSelimModal");
+
+assignToSelim.addEventListener("click", () => {
+  selimModal.classList.remove("hidden");
+});
+
+closeSelimModal.addEventListener("click", () => {
+  selimModal.classList.add("hidden");
+});
+
+// Modal dışına tıklandığında kapatma
+selimModal.addEventListener("click", (e) => {
+  if (e.target === selimModal) {
+    selimModal.classList.add("hidden");
+  }
+});
