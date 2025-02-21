@@ -317,7 +317,7 @@ async function updateTaskStatus(taskKey, status) {
 
 async function assignTaskToUser(taskKey, selectedUserId, comment, moveToSelectedForDev, assignmentType) {
   try {
-    // Eğer %80< seçeneği seçilmişse
+    // Eğer under_80 seçeneği seçilmişse
     if (assignmentType === "under_80") {
       // Düşük performanslı developerları al
       const lowPerformers = await new Promise((resolve) => {
