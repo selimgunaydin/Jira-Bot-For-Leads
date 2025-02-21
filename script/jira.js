@@ -217,7 +217,7 @@ async function getUnassignedTasks() {
 
 async function hasActiveTask(accountId) {
   try {
-    const jqlQuery = `project = "${PROJECT_KEY}" AND assignee = ${accountId} AND status in ("Selected for Development", "In Progress")`;
+    const jqlQuery = `project = "${PROJECT_KEY}" AND assignee = ${accountId} AND status in ("Selected for Development", "In Progress") AND created >= -30d AND Sprint IS NOT EMPTY`;
     const response = await axios.get(
       `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}`,
       {
