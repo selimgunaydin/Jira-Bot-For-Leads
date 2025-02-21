@@ -105,16 +105,14 @@ let userPointsCache = {
   lowest_total: null,
   random: null
 };
+let userPointsData = [];
+let lowPerformers = [];
 
 // Buton durumunu kontrol et
 function checkButtonState() {
-  const isPointsCalculated = assignmentType.value === "specific" || 
-    (userPointsCache.lowest_done !== null && userPointsCache.lowest_total !== null);
-  
   const shouldBeEnabled = isUsersLoaded && 
     isTasksLoaded && 
-    !isCalculating && 
-    isPointsCalculated;
+    !isCalculating;
 
   assignTask.disabled = !shouldBeEnabled;
   assignTask.classList.toggle("opacity-50", !shouldBeEnabled);
@@ -125,8 +123,6 @@ function checkButtonState() {
     assignTask.textContent = "Puanlar Hesaplanıyor...";
   } else if (!isUsersLoaded || !isTasksLoaded) {
     assignTask.textContent = "Veriler Yükleniyor...";
-  } else if (!isPointsCalculated && assignmentType.value !== "specific") {
-    assignTask.textContent = "Puanlar Hesaplanmadı";
   } else {
     assignTask.textContent = "Start Process";
   }
@@ -164,36 +160,98 @@ function refreshTaskAssignmentArea() {
 // Add click event to refresh button
 refreshTaskAssignment.addEventListener("click", refreshTaskAssignmentArea);
 
-// Kullanıcı puanlarını hesapla
+// developer puanlarını hesapla
 async function calculateUserPoints() {
   isCalculating = true;
   checkButtonState();
   ipcRenderer.send("calculate-user-points", { users: cachedUsers });
 }
 
-// IPC Event Listeners
-ipcRenderer.on("project-users-data", (event, users) => {
-  try {
-    // Cache users
-    cachedUsers = users;
-    
-    assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
-    users.forEach((user) => {
-      const option = document.createElement("option");
-      option.value = user.accountId;
-      option.textContent = `${user.displayName} ${
-        user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"
-      }`;
-      assigneeUser.appendChild(option);
-    });
-    isUsersLoaded = true;
-    checkButtonState();
+// Modal elements
+const targetPointsModal = document.getElementById("targetPointsModal");
+const targetPointsContent = document.getElementById("targetPointsContent");
+const saveTargetPoints = document.getElementById("saveTargetPoints");
+const closeTargetPointsModal = document.getElementById("closeTargetPointsModal");
+const editTargetPoints = document.getElementById("editTargetPoints");
 
-    // Kullanıcı puanlarını hesapla
-    calculateUserPoints();
-  } catch (error) {
-    console.error("Error updating user list:", error);
-  }
+// Modal işlemleri
+function showTargetPointsModal() {
+    targetPointsContent.innerHTML = '';
+    cachedUsers.forEach(user => {
+        const savedTarget = localStorage.getItem(`targetPoints-${user.emailAddress}`) || 0;
+        const userDiv = document.createElement('div');
+        userDiv.className = 'mb-4';
+        userDiv.innerHTML = `
+            <label class="block text-sm font-medium text-gray-700 mb-1">${user.displayName}</label>
+            <div class="flex space-x-2">
+                <input type="number" 
+                       class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring" 
+                       value="${savedTarget}"
+                       data-email="${user.emailAddress}"
+                       min="0">
+                <span class="text-sm text-gray-500 py-2">puan/ay</span>
+            </div>
+        `;
+        targetPointsContent.appendChild(userDiv);
+    });
+    targetPointsModal.classList.remove('hidden');
+}
+
+saveTargetPoints.addEventListener('click', async () => {
+    const inputs = targetPointsContent.querySelectorAll('input');
+    
+    for (const input of inputs) {
+        const email = input.dataset.email;
+        const value = parseInt(input.value) || 0;
+        localStorage.setItem(`targetPoints-${email}`, value);
+    }
+
+    targetPointsModal.classList.add('hidden');
+    await calculateUserPoints();
+});
+
+closeTargetPointsModal.addEventListener('click', () => {
+    targetPointsModal.classList.add('hidden');
+});
+
+// Hedef düzenleme butonu
+editTargetPoints.addEventListener('click', () => {
+    showTargetPointsModal();
+});
+
+// IPC Event Listeners
+ipcRenderer.on("project-users-data", async (event, users) => {
+    try {
+        cachedUsers = users;
+        
+        assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
+        let needsTargetPoints = false;
+        
+        users.forEach((user) => {
+            const option = document.createElement("option");
+            option.value = user.accountId;
+            const savedTarget = localStorage.getItem(`targetPoints-${user.emailAddress}`);
+            if (!savedTarget) {
+                needsTargetPoints = true;
+            }
+            option.textContent = `${user.displayName} ${
+                user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"
+            }`;
+            assigneeUser.appendChild(option);
+        });
+
+        isUsersLoaded = true;
+        checkButtonState();
+
+        if (needsTargetPoints) {
+            showTargetPointsModal();
+        } else {
+            // Hedefler varsa hesaplamayı başlat
+            await calculateUserPoints();
+        }
+    } catch (error) {
+        console.error("Error updating user list:", error);
+    }
 });
 
 ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
@@ -215,14 +273,24 @@ ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
   }
 });
 
-// Kullanıcı puanları hesaplandığında
 ipcRenderer.on("user-points-calculated", (event, data) => {
-  userPointsCache = {
-    ...data,
-    random: data.random || cachedUsers[Math.floor(Math.random() * cachedUsers.length)]
-  };
-  isCalculating = false;
-  checkButtonState();
+    const { userPointsData: newUserPointsData, lowPerformers: newLowPerformers } = data;
+    userPointsData = newUserPointsData;
+    lowPerformers = newLowPerformers;
+    
+    // developer listesini güncelle ve tamamlanma oranlarını göster
+    assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
+    userPointsData.forEach((userData) => {
+        const option = document.createElement("option");
+        option.value = userData.accountId;
+        option.textContent = `${userData.displayName} (${userData.currentCompletionRatio.toFixed(1)}%) ${
+            userData.hasInProgressTasks ? "🔄" : "✅"
+        }`;
+        assigneeUser.appendChild(option);
+    });
+
+    isCalculating = false;
+    checkButtonState();
 });
 
 // Update user selection when assignment type changes
@@ -260,37 +328,99 @@ assignTask.addEventListener("click", () => {
     return;
   }
 
-  if (assignmentType.value === "specific" && !assigneeUser.value) {
-    alert("Please select a user!");
-    return;
-  }
+  // Seçilen developeryı belirle
+  let selectedUserId = null;
+  let selectedUser = null;
 
-  // Seçilen veya hesaplanmış kullanıcıyı belirle
-  let selectedUserId = assigneeUser.value;
-  if (assignmentType.value !== "specific") {
-    const user = userPointsCache[assignmentType.value];
-    if (!user) {
-      alert("Kullanıcı puanları henüz hesaplanmadı, lütfen sayfayı yenileyin!");
+  try {
+    // In-progress'te işi olmayan developerları filtrele
+    const availableUsers = userPointsData.filter(user => !user.hasInProgressTasks);
+
+    if (availableUsers.length === 0) {
+      alert("Atama yapılabilecek uygun developer bulunamadı! Tüm developerların üzerinde in-progress task var.");
       return;
     }
-    selectedUserId = user.accountId;
+
+    switch (assignmentType.value) {
+      case "specific":
+        if (!assigneeUser.value) {
+          alert("Lütfen bir developer seçin!");
+          return;
+        }
+        selectedUserId = assigneeUser.value;
+        selectedUser = userPointsData.find(u => u.accountId === selectedUserId);
+        if (selectedUser?.hasInProgressTasks) {
+          alert("Seçilen developernın üzerinde in-progress task var!");
+          return;
+        }
+        break;
+
+      case "under_80":
+        // Performansı %80'in üzerinde olan ve in-progress'te işi olmayan developerları filtrele
+        const highPerformers = availableUsers.filter(user => user.currentCompletionRatio <= 80);
+        if (highPerformers.length > 0) {
+          selectedUser = highPerformers[Math.floor(Math.random() * highPerformers.length)];
+          selectedUserId = selectedUser.accountId;
+        } else {
+          alert("Performansı %80'in altında olan ve uygun durumda developer bulunamadı!");
+          return;
+        }
+        break;
+
+      case "lowest_done":
+        // Done puanı en düşük ve in-progress'te işi olmayan developer
+        selectedUser = availableUsers.reduce((min, user) => 
+          !min || user.donePoints < min.donePoints ? user : min, null);
+        selectedUserId = selectedUser.accountId;
+        break;
+
+      case "lowest_total":
+        // Toplam puanı en düşük ve in-progress'te işi olmayan developer
+        selectedUser = availableUsers.reduce((min, user) => 
+          !min || user.totalPoints < min.totalPoints ? user : min, null);
+        selectedUserId = selectedUser.accountId;
+        break;
+
+      case "random":
+        // In-progress'te işi olmayan developerlar arasından rastgele seç
+        selectedUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
+        selectedUserId = selectedUser.accountId;
+        break;
+
+      default:
+        alert("Geçersiz atama tipi!");
+        return;
+    }
+
+    if (!selectedUserId || !selectedUser) {
+      alert("Uygun developer bulunamadı!");
+      return;
+    }
+
+    // Disable button and add visual feedback
+    assignTask.disabled = true;
+    assignTask.classList.add("opacity-50", "cursor-not-allowed");
+    assignTask.textContent = "Processing...";
+
+    // Assign task using cached data
+    ipcRenderer.send("assign-task", {
+      taskKey: taskToAssign.value,
+      selectedUserId: selectedUserId,
+      cachedUsers: cachedUsers,
+      cachedTasks: cachedTasks,
+      comment: taskComment.value.trim(),
+      moveToSelectedForDev: moveToSelectedForDev.checked,
+      isTestMode: testMode.checked,
+      assignmentType: assignmentType.value
+    });
+
+  } catch (error) {
+    console.error("Task atama sırasında hata:", error);
+    alert("Task atama işlemi sırasında bir hata oluştu!");
+    assignTask.disabled = false;
+    assignTask.classList.remove("opacity-50", "cursor-not-allowed");
+    assignTask.textContent = "Start Process";
   }
-
-  // Disable button and add visual feedback
-  assignTask.disabled = true;
-  assignTask.classList.add("opacity-50", "cursor-not-allowed");
-  assignTask.textContent = "Processing...";
-
-  // Assign task using cached data
-  ipcRenderer.send("assign-task", {
-    taskKey: taskToAssign.value,
-    selectedUserId: selectedUserId,
-    cachedUsers: cachedUsers,
-    cachedTasks: cachedTasks,
-    comment: taskComment.value.trim(),
-    moveToSelectedForDev: moveToSelectedForDev.checked,
-    isTestMode: testMode.checked
-  });
 });
 
 // Task assignment result listener
@@ -309,7 +439,7 @@ ipcRenderer.on("task-assigned", (event, result) => {
     if (result.activeTasks && result.activeTasks.length > 0) {
       const taskList = result.activeTasks.join("\n");
       alert(
-        `Kullanıcının üzerinde aktif task'lar olduğu için atama yapılamadı.\n\nAktif Task'lar:\n${taskList}`
+        `developernın üzerinde aktif task'lar olduğu için atama yapılamadı.\n\nAktif Task'lar:\n${taskList}`
       );
     } else {
       alert(result.error || "Task atama işlemi başarısız oldu!");
