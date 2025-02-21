@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
+const path = require("path");
 require("./script/jira");
 
 function createWindow() {
@@ -9,6 +10,7 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
     },
+    icon: path.join(__dirname, 'assets/icon.icns')
   });
 
   global.mainWindow = win;

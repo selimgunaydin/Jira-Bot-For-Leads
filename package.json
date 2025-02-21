@@ -9,7 +9,14 @@
   "build": {
     "appId": "com.jirabot.app",
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "icon": "assets/icon.png"
     }
   },
   "keywords": [],
