@@ -28,13 +28,13 @@ const projectKey = document.getElementById("projectKey");
 const taskStatus = document.getElementById("taskStatus");
 const excludedEmails = document.getElementById("excludedEmails");
 
-jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL") || "";
-email.value = localStorage.getItem("EMAIL") || "";
-apiToken.value = localStorage.getItem("API_TOKEN") || "";
-projectKey.value = localStorage.getItem("PROJECT_KEY") || "S1";
+jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL_LEAD") || "";
+email.value = localStorage.getItem("EMAIL_LEAD") || "";
+apiToken.value = localStorage.getItem("API_TOKEN_LEAD") || "";
+projectKey.value = localStorage.getItem("PROJECT_KEY_LEAD") || "S1";
 taskStatus.value =
-  localStorage.getItem("TASK_STATUS") || "Selected for Development";
-excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS") || "";
+  localStorage.getItem("TASK_STATUS_LEAD") || "Selected for Development";
+excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS_LEAD") || "";
 
 const configInputs = [
   jiraBaseUrl,
@@ -46,12 +46,12 @@ const configInputs = [
 ];
 configInputs.forEach((input) => {
   input.addEventListener("change", () => {
-    localStorage.setItem("JIRA_BASE_URL", jiraBaseUrl.value);
-    localStorage.setItem("EMAIL", email.value);
-    localStorage.setItem("API_TOKEN", apiToken.value);
-    localStorage.setItem("PROJECT_KEY", projectKey.value);
-    localStorage.setItem("TASK_STATUS", taskStatus.value);
-    localStorage.setItem("EXCLUDED_EMAILS", excludedEmails.value);
+    localStorage.setItem("JIRA_BASE_URL_LEAD", jiraBaseUrl.value);
+    localStorage.setItem("EMAIL_LEAD", email.value);
+    localStorage.setItem("API_TOKEN_LEAD", apiToken.value);
+    localStorage.setItem("PROJECT_KEY_LEAD", projectKey.value);
+    localStorage.setItem("TASK_STATUS_LEAD", taskStatus.value);
+    localStorage.setItem("EXCLUDED_EMAILS_LEAD", excludedEmails.value);
 
     ipcRenderer.send("update-config", {
       JIRA_BASE_URL: jiraBaseUrl.value,
@@ -242,11 +242,11 @@ assignmentType.addEventListener("change", () => {
 
 // Test modu değişikliğinde localStorage'a kaydet
 testMode.addEventListener("change", () => {
-  localStorage.setItem("TEST_MODE", testMode.checked);
+  localStorage.setItem("TEST_MODE_LEAD", testMode.checked);
 });
 
 // Sayfa yüklendiğinde test modu durumunu yükle
-testMode.checked = localStorage.getItem("TEST_MODE") === "true";
+testMode.checked = localStorage.getItem("TEST_MODE_LEAD") === "true";
 
 // Task assignment process
 assignTask.addEventListener("click", () => {
