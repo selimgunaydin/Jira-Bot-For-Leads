@@ -291,7 +291,31 @@ async function addCommentToTask(taskKey, comment) {
   }
 }
 
-async function assignTaskToUser(taskKey, accountId, comment = "") {
+async function updateTaskStatus(taskKey, status) {
+  try {
+    await axios.post(
+      `${JIRA_BASE_URL}/rest/api/3/issue/${taskKey}/transitions`,
+      {
+        transition: {
+          id: status === "Selected for Development" ? "3" : "4" // 3: Selected for Development, 4: In Progress
+        }
+      },
+      {
+        auth: { username: EMAIL, password: API_TOKEN },
+      }
+    );
+    logger.info(`Task ${taskKey} durumu "${status}" olarak güncellendi.`);
+  } catch (error) {
+    logger.error(
+      `Task durumu güncellenirken hata oluştu: ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
+    throw error;
+  }
+}
+
+async function assignTaskToUser(taskKey, accountId, comment = "", moveToSelectedForDev = false) {
   try {
     // Kullanıcının aktif task'larını kontrol et
     const activeTaskCheck = await hasActiveTask(accountId);
@@ -319,8 +343,12 @@ async function assignTaskToUser(taskKey, accountId, comment = "") {
 
     // Eğer comment varsa ekle
     if (comment) {
-      logger.info(`Task ${taskKey} için yorum eklendi: ${comment}`);
-      // await addCommentToTask(taskKey, comment);
+      await addCommentToTask(taskKey, comment);
+    }
+
+    // Eğer isteniyorsa task durumunu güncelle
+    if (moveToSelectedForDev) {
+      await updateTaskStatus(taskKey, "Selected for Development");
     }
 
     logger.info(`Task ${taskKey} başarıyla ${accountId} kullanıcısına atandı.`);
@@ -410,7 +438,7 @@ ipcMain.on("get-unassigned-tasks", async (event) => {
 
 ipcMain.on("assign-task", async (event, data) => {
   try {
-    const { taskKey, assignmentType, selectedUserId, cachedUsers, cachedTasks, comment } = data;
+    const { taskKey, assignmentType, selectedUserId, cachedUsers, cachedTasks, comment, moveToSelectedForDev } = data;
     let selectedUser;
 
     if (assignmentType === "specific") {
@@ -427,11 +455,10 @@ ipcMain.on("assign-task", async (event, data) => {
     }
 
     // Task ataması yap
-    //const result = await assignTaskToUser(taskKey, selectedUser.accountId, comment);
-
+    // const result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
     logger.info(`Task ${taskKey} başarıyla ${selectedUser.displayName} kullanıcısına atandı.`);
     logger.info(`Task'a "${comment}" yorumu eklendi.`);
-
+    
     if (result.success) {
       // Başarılı atama sonrası cached listeleri güncelle
       const taskIndex = cachedTasks.findIndex(task => task.key === taskKey);

@@ -91,6 +91,7 @@ const assignTask = document.getElementById("assignTask");
 const refreshTaskAssignment = document.getElementById("refreshTaskAssignment");
 const userSelectContainer = document.getElementById("userSelectContainer");
 const taskComment = document.getElementById("taskComment");
+const moveToSelectedForDev = document.getElementById("moveToSelectedForDev");
 
 // Global değişkenler
 let cachedUsers = [];
@@ -221,7 +222,8 @@ assignTask.addEventListener("click", () => {
     selectedUserId: assigneeUser.value,
     cachedUsers: cachedUsers,
     cachedTasks: cachedTasks,
-    comment: taskComment.value.trim()
+    comment: taskComment.value.trim(),
+    moveToSelectedForDev: moveToSelectedForDev.checked
   });
 });
 
@@ -235,6 +237,7 @@ ipcRenderer.on("task-assigned", (event, result) => {
   if (result.success) {
     alert(`Task başarıyla atandı!`);
     taskComment.value = "";
+    moveToSelectedForDev.checked = false;
     updateTaskList();
   } else {
     if (result.activeTasks && result.activeTasks.length > 0) {
