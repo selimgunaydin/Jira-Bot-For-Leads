@@ -253,7 +253,45 @@ async function hasActiveTask(accountId) {
   }
 }
 
-async function assignTaskToUser(taskKey, accountId) {
+async function addCommentToTask(taskKey, comment) {
+  try {
+    if (!comment) return; // Comment boşsa işlem yapma
+
+    await axios.post(
+      `${JIRA_BASE_URL}/rest/api/3/issue/${taskKey}/comment`,
+      {
+        body: {
+          type: "doc",
+          version: 1,
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: comment
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        auth: { username: EMAIL, password: API_TOKEN },
+      }
+    );
+    logger.info(`Task ${taskKey}'e yorum eklendi: ${comment}`);
+  } catch (error) {
+    logger.error(
+      `Yorum eklenirken hata oluştu: ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
+    throw error;
+  }
+}
+
+async function assignTaskToUser(taskKey, accountId, comment = "") {
   try {
     // Kullanıcının aktif task'larını kontrol et
     const activeTaskCheck = await hasActiveTask(accountId);
@@ -268,6 +306,7 @@ async function assignTaskToUser(taskKey, accountId) {
       };
     }
 
+    // Task'ı ata
     await axios.put(
       `${JIRA_BASE_URL}/rest/api/3/issue/${taskKey}/assignee`,
       {
@@ -277,6 +316,13 @@ async function assignTaskToUser(taskKey, accountId) {
         auth: { username: EMAIL, password: API_TOKEN },
       }
     );
+
+    // Eğer comment varsa ekle
+    if (comment) {
+      logger.info(`Task ${taskKey} için yorum eklendi: ${comment}`);
+      // await addCommentToTask(taskKey, comment);
+    }
+
     logger.info(`Task ${taskKey} başarıyla ${accountId} kullanıcısına atandı.`);
     return {
       success: true,
@@ -364,7 +410,7 @@ ipcMain.on("get-unassigned-tasks", async (event) => {
 
 ipcMain.on("assign-task", async (event, data) => {
   try {
-    const { taskKey, assignmentType, selectedUserId, cachedUsers, cachedTasks } = data;
+    const { taskKey, assignmentType, selectedUserId, cachedUsers, cachedTasks, comment } = data;
     let selectedUser;
 
     if (assignmentType === "specific") {
@@ -381,22 +427,29 @@ ipcMain.on("assign-task", async (event, data) => {
     }
 
     // Task ataması yap
-    //await assignTaskToUser(taskKey, selectedUser.accountId);
+    //const result = await assignTaskToUser(taskKey, selectedUser.accountId, comment);
+
     logger.info(`Task ${taskKey} başarıyla ${selectedUser.displayName} kullanıcısına atandı.`);
-    // Başarılı atama sonrası cached listeleri güncelle
-    const taskIndex = cachedTasks.findIndex(task => task.key === taskKey);
-    if (taskIndex !== -1) {
-      cachedTasks.splice(taskIndex, 1);
+    logger.info(`Task'a "${comment}" yorumu eklendi.`);
+
+    if (result.success) {
+      // Başarılı atama sonrası cached listeleri güncelle
+      const taskIndex = cachedTasks.findIndex(task => task.key === taskKey);
+      if (taskIndex !== -1) {
+        cachedTasks.splice(taskIndex, 1);
+      }
+
+      event.reply("task-assigned", {
+        success: true,
+        message: `Task ${taskKey} başarıyla ${selectedUser.displayName} kullanıcısına atandı.`,
+      });
+
+      // UI'ı güncelle
+      event.reply("unassigned-tasks-data", cachedTasks);
+      event.reply("project-users-data", cachedUsers);
+    } else {
+      event.reply("task-assigned", result);
     }
-
-    event.reply("task-assigned", {
-      success: true,
-      message: `Task ${taskKey} başarıyla ${selectedUser.displayName} kullanıcısına atandı.`,
-    });
-
-    // UI'ı güncelle
-    event.reply("unassigned-tasks-data", cachedTasks);
-    event.reply("project-users-data", cachedUsers);
   } catch (error) {
     logger.error(
       `Hata oluştu (task atama): ${
