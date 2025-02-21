@@ -2,10 +2,19 @@
 node_modules/
 yarn.lock
 package-lock.json
+npm-debug.log
+yarn-debug.log
+yarn-error.log
 
 # Build outputs
 dist/
 build/
+release/
+*.app
+*.exe
+*.dmg
+*.deb
+*.AppImage
 
 # Environment files
 .env
@@ -17,6 +26,8 @@ build/
 .vscode/
 *.sublime-project
 *.sublime-workspace
+*.swp
+*.swo
 
 # OS files
 .DS_Store

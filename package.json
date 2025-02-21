@@ -1,26 +1,35 @@
 {
   "name": "jira-bot-lead",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "pack-mac": "electron-builder --mac",
+    "pack-win": "electron-builder --win",
+    "pack-linux": "electron-builder --linux"
   },
   "build": {
+    "productName": "Jira Task Atama Botu",
     "appId": "com.jirabot.app",
     "mac": {
       "category": "public.app-category.productivity",
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.icns",
+      "target": ["dmg", "zip"]
     },
     "win": {
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "target": ["nsis", "portable"]
     },
     "linux": {
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "target": ["AppImage", "deb"]
     }
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["jira", "task", "automation", "project management"],
+  "author": {
+    "name": "Jira Bot Team"
+  },
   "license": "ISC",
   "dependencies": {
     "@slack/web-api": "^7.8.0",
