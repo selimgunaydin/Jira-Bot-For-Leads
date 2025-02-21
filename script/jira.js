@@ -438,25 +438,48 @@ ipcMain.on("get-unassigned-tasks", async (event) => {
 
 ipcMain.on("assign-task", async (event, data) => {
   try {
-    const { taskKey, assignmentType, selectedUserId, cachedUsers, cachedTasks, comment, moveToSelectedForDev } = data;
-    let selectedUser;
-
-    if (assignmentType === "specific") {
-      // Cached users listesinden seçilen kullanıcıyı bul
-      selectedUser = cachedUsers.find(user => user.accountId === selectedUserId);
-    } else {
-      // Cached users listesini kullanarak en düşük puanlı kullanıcıyı bul
-      selectedUser = await getUserWithLowestPoints(cachedUsers);
-    }
+    const { taskKey, selectedUserId, cachedUsers, cachedTasks, comment, moveToSelectedForDev, isTestMode } = data;
+    const selectedUser = cachedUsers.find(user => user.accountId === selectedUserId);
 
     if (!selectedUser) {
       logger.error("Kullanıcı bulunamadı!");
       return;
     }
 
-    // Task ataması yap
-    const result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
-    
+    let result;
+    logger.info(isTestMode);
+    if (isTestMode) {
+      // Test modunda gerçek atama yapmadan simülasyon yap
+      logger.info("=== TEST MODU ===");
+      logger.info(`Task ${taskKey} için simülasyon yapılıyor...`);
+      logger.info(`Seçilen kullanıcı: ${selectedUser.displayName} (${selectedUser.accountId})`);
+      
+      // Aktif task kontrolü simülasyonu
+      const activeTaskCheck = await hasActiveTask(selectedUser.accountId);
+      if (activeTaskCheck.hasActive) {
+        const taskList = activeTaskCheck.tasks.join("\n");
+        logger.warn(`[TEST] Kullanıcının üzerinde aktif task'lar var:\n${taskList}`);
+        result = {
+          success: false,
+          error: "Kullanıcının üzerinde aktif task'lar var",
+          activeTasks: activeTaskCheck.tasks,
+        };
+      } else {
+        // Başarılı atama simülasyonu
+        logger.info(`[TEST] Task ${taskKey} başarıyla ${selectedUser.displayName} kullanıcısına atanacaktı`);
+        if (comment) {
+          logger.info(`[TEST] Task'a eklenecek yorum: "${comment}"`);
+        }
+        if (moveToSelectedForDev) {
+          logger.info(`[TEST] Task durumu "Selected for Development" olarak güncellenecekti`);
+        }
+        result = { success: true };
+      }
+      logger.info("=== TEST MODU ===");
+    } else {
+      // Gerçek atama işlemi
+      result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
+    }
     
     if (result.success) {
       // Başarılı atama sonrası cached listeleri güncelle

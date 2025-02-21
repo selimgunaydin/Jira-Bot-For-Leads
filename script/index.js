@@ -92,6 +92,7 @@ const refreshTaskAssignment = document.getElementById("refreshTaskAssignment");
 const userSelectContainer = document.getElementById("userSelectContainer");
 const taskComment = document.getElementById("taskComment");
 const moveToSelectedForDev = document.getElementById("moveToSelectedForDev");
+const testMode = document.getElementById("testMode");
 
 // Global değişkenler
 let cachedUsers = [];
@@ -193,6 +194,14 @@ assignmentType.addEventListener("change", () => {
   }
 });
 
+// Test modu değişikliğinde localStorage'a kaydet
+testMode.addEventListener("change", () => {
+  localStorage.setItem("TEST_MODE", testMode.checked);
+});
+
+// Sayfa yüklendiğinde test modu durumunu yükle
+testMode.checked = localStorage.getItem("TEST_MODE") === "true";
+
 // Task assignment process
 assignTask.addEventListener("click", () => {
   // Stop if button is already disabled
@@ -210,6 +219,17 @@ assignTask.addEventListener("click", () => {
     return;
   }
 
+  // Seçilen veya hesaplanmış kullanıcıyı belirle
+  let selectedUserId = assigneeUser.value;
+  if (assignmentType.value !== "specific") {
+    const user = userPointsCache[assignmentType.value];
+    if (!user) {
+      alert("Kullanıcı puanları henüz hesaplanmadı!");
+      return;
+    }
+    selectedUserId = user.accountId;
+  }
+
   // Disable button and add visual feedback
   assignTask.disabled = true;
   assignTask.classList.add("opacity-50", "cursor-not-allowed");
@@ -218,12 +238,12 @@ assignTask.addEventListener("click", () => {
   // Assign task using cached data
   ipcRenderer.send("assign-task", {
     taskKey: taskToAssign.value,
-    assignmentType: assignmentType.value,
-    selectedUserId: assigneeUser.value,
+    selectedUserId: selectedUserId,
     cachedUsers: cachedUsers,
     cachedTasks: cachedTasks,
     comment: taskComment.value.trim(),
-    moveToSelectedForDev: moveToSelectedForDev.checked
+    moveToSelectedForDev: moveToSelectedForDev.checked,
+    isTestMode: testMode.checked
   });
 });
 
