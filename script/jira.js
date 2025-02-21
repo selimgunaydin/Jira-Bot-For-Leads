@@ -455,9 +455,8 @@ ipcMain.on("assign-task", async (event, data) => {
     }
 
     // Task ataması yap
-    // const result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
-    logger.info(`Task ${taskKey} başarıyla ${selectedUser.displayName} kullanıcısına atandı.`);
-    logger.info(`Task'a "${comment}" yorumu eklendi.`);
+    const result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev);
+    
     
     if (result.success) {
       // Başarılı atama sonrası cached listeleri güncelle
