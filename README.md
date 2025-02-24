@@ -1,50 +1,106 @@
 # Jira Task Atama Botu
 
-Bu uygulama, Jira projelerindeki görevlerin otomatik olarak atanmasını ve yönetilmesini sağlayan bir masaüstü uygulamasıdır.
+Bu uygulama, Jira projelerindeki görevlerin otomatik olarak atanmasını ve yönetilmesini sağlayan bir masaüstü uygulamasıdır. Electron tabanlı bu uygulama, takım liderlerinin iş yükü dengelemesini ve görev yönetimini kolaylaştırmayı amaçlamaktadır.
 
-## Özellikler
+## 🚀 Özellikler
 
-- Atanmamış görevleri otomatik listeleme
-- Aktif Developerları görüntüleme
-- Görev puanlarına göre otomatik atama
-- Developer iş yükü dengeleme
-- Gerçek zamanlı görev takibi
+- **Akıllı Görev Atama Sistemi**
+  - En düşük tamamlanan görev sayısına göre atama
+  - En düşük toplam puana göre atama
+  - Rastgele atama
+  - Belirli bir kullanıcıya atama
+  - %80 performans altındaki geliştiricilere atama
 
-## Kurulum
+- **Gelişmiş Görev Yönetimi**
+  - Atanmamış görevleri otomatik listeleme
+  - Görev durumunu "Selected for Development" olarak güncelleme
+  - Görev atamalarında otomatik yorum ekleme
+  - Gerçek zamanlı görev takibi
 
-1. Sisteminize uygun kurulum dosyasını indirin:
+- **Performans İzleme**
+  - Developer bazlı hedef puan belirleme
+  - Tamamlanan görevlere göre performans hesaplama
+  - Toplam görev puanlarına göre performans hesaplama
+
+- **Özelleştirilebilir Ayarlar**
+  - Test modu desteği
+  - Hariç tutulacak kullanıcı listesi
+  - Esnek görev durumu seçenekleri
+  - Modern ve kullanıcı dostu arayüz
+
+## 💻 Kurulum
+
+### Son Kullanıcı Kurulumu
+1. [Releases](https://github.com/yourusername/jira-bot-lead/releases) sayfasından sisteminize uygun sürümü indirin:
    - macOS: `.dmg` veya `.zip`
    - Windows: `.exe` veya portable sürüm
    - Linux: `.AppImage` veya `.deb`
 
-2. Kurulum dosyasını çalıştırın ve talimatları takip edin.
+2. İndirilen dosyayı çalıştırın ve kurulum sihirbazını takip edin.
 
-## Yapılandırma
-
-İlk çalıştırmada aşağıdaki bilgileri girmeniz gerekecektir:
-
-- Jira URL'si
-- E-posta adresi
-- API Token
-- Proje anahtarı
-
-## Geliştirici Kurulumu
+### Geliştirici Kurulumu
 
 ```bash
+# Projeyi klonlayın
+git clone https://github.com/yourusername/jira-bot-lead.git
+
+# Proje dizinine gidin
+cd jira-bot-lead
+
 # Bağımlılıkları yükleyin
 npm install
 
 # Uygulamayı geliştirme modunda başlatın
 npm start
 
-# Uygulamayı paketleyin
-npm run build
+# Platform bazlı paketleme
+npm run pack-mac     # macOS için
+npm run pack-win     # Windows için
+npm run pack-linux   # Linux için
 ```
 
-## Lisans
+## ⚙️ Yapılandırma
 
-ISC
+### Gerekli Ayarlar
+1. **Jira Ayarları**
+   - Jira URL'si (örn: https://your-domain.atlassian.net)
+   - E-posta adresi
+   - API Token ([Jira API Token nasıl alınır?](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/))
+   - Proje anahtarı
 
-## İletişim
+2. **Uygulama Ayarları**
+   - Görev durumu seçimi
+   - Performans hesaplama tipi
+   - Hariç tutulacak e-postalar
+   - Test modu ayarları
 
-Herhangi bir sorun veya öneriniz için Issues bölümünü kullanabilirsiniz. 
+## 🛠 Teknolojiler
+
+- Electron.js
+- Node.js
+- Tailwind CSS
+- Axios
+- Winston (Loglama)
+- Electron Store (Veri Saklama)
+- Slack Web API (Bildirimler için)
+
+## 📝 Lisans
+
+Bu proje ISC lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasını inceleyebilirsiniz.
+
+## 🤝 Katkıda Bulunma
+
+1. Bu projeyi fork edin
+2. Feature branch'inizi oluşturun (`git checkout -b feature/AmazingFeature`)
+3. Değişikliklerinizi commit edin (`git commit -m 'Add some AmazingFeature'`)
+4. Branch'inizi push edin (`git push origin feature/AmazingFeature`)
+5. Pull Request oluşturun
+
+## 📞 İletişim
+
+- Proje ile ilgili sorunlar için [Issues](https://github.com/yourusername/jira-bot-lead/issues) sayfasını kullanabilirsiniz
+- Önerileriniz için [Discussions](https://github.com/yourusername/jira-bot-lead/discussions) bölümünü kullanabilirsiniz
+
+## 🙏 Teşekkürler
+
+Bu projeye katkıda bulunan herkese teşekkür ederiz! 
