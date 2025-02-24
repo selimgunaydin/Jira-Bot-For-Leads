@@ -107,6 +107,7 @@ let userPointsCache = {
 };
 let userPointsData = [];
 let lowPerformers = [];
+let performanceType = "done"; // Varsayılan performans hesaplama tipi
 
 // Buton durumunu kontrol et
 function checkButtonState() {
@@ -160,11 +161,20 @@ function refreshTaskAssignmentArea() {
 // Add click event to refresh button
 refreshTaskAssignment.addEventListener("click", refreshTaskAssignmentArea);
 
+// Performans tipini değiştirme
+document.getElementById("performanceType").addEventListener("change", async (e) => {
+    performanceType = e.target.value;
+    await calculateUserPoints();
+});
+
 // developer puanlarını hesapla
 async function calculateUserPoints() {
   isCalculating = true;
   checkButtonState();
-  ipcRenderer.send("calculate-user-points", { users: cachedUsers });
+  ipcRenderer.send("calculate-user-points", { 
+    users: cachedUsers,
+    performanceType: performanceType 
+  });
 }
 
 // Modal elements

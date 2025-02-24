@@ -447,7 +447,7 @@ async function getUserWithLowestPoints(users, type = "done") {
 }
 
 // developer puanlarını hesapla
-async function calculateUserPoints(users) {
+async function calculateUserPoints(users, performanceType = "done") {
   try {
     let userPointsData = [];
     let lowPerformers = [];
@@ -488,6 +488,7 @@ async function calculateUserPoints(users) {
     const expectedCompletionRatio = (workDaysUntilToday / totalWorkDays) * 100;
 
     logger.info("=== Developer Puanları Hesaplanıyor ===");
+    logger.info(`Hesaplama Tipi: ${performanceType === "done" ? "Done Points" : "All Points"}`);
     logger.info(`Ay içindeki toplam iş günü: ${totalWorkDays}`);
     logger.info(`Bugüne kadar geçen iş günü: ${workDaysUntilToday}`);
     logger.info(`Beklenen tamamlanma oranı: ${expectedCompletionRatio.toFixed(1)}%\n`);
@@ -522,12 +523,15 @@ async function calculateUserPoints(users) {
         }
       });
 
+      // Performans hesaplama tipine göre puanları belirle
+      const calculatedPoints = performanceType === "done" ? donePoints : totalPoints;
+      
       // Toplam tamamlanma oranı
-      const completionRatio = targetPoints > 0 ? (donePoints / targetPoints) * 100 : 0;
+      const completionRatio = targetPoints > 0 ? (calculatedPoints / targetPoints) * 100 : 0;
       
       // Güncel hedefe göre tamamlanma oranı
       const currentTargetPoints = (targetPoints * workDaysUntilToday) / totalWorkDays;
-      const currentCompletionRatio = currentTargetPoints > 0 ? (donePoints / currentTargetPoints) * 100 : 0;
+      const currentCompletionRatio = currentTargetPoints > 0 ? (calculatedPoints / currentTargetPoints) * 100 : 0;
 
       const userData = {
         ...user,
@@ -535,7 +539,8 @@ async function calculateUserPoints(users) {
         totalPoints,
         targetPoints,
         completionRatio,
-        currentCompletionRatio
+        currentCompletionRatio,
+        calculatedPoints
       };
 
       userPointsData.push(userData);
@@ -679,10 +684,10 @@ ipcMain.on("assign-task", async (event, data) => {
   }
 });
 
-ipcMain.on("calculate-user-points", async (event, { users }) => {
+ipcMain.on("calculate-user-points", async (event, { users, performanceType }) => {
   try {
     logger.info("developer puanları hesaplanıyor...");
-    const userPoints = await calculateUserPoints(users);
+    const userPoints = await calculateUserPoints(users, performanceType);
     logger.info("developer puanları hesaplandı.");
     event.reply("user-points-calculated", userPoints);
   } catch (error) {
