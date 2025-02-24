@@ -86,6 +86,8 @@ ipcRenderer.on("log-message", (event, message) => {
 // Task assignment elements
 const assigneeUser = document.getElementById("assigneeUser");
 const taskToAssign = document.getElementById("taskToAssign");
+const manualTaskContainer = document.getElementById("manualTaskContainer");
+const manualTaskInput = document.getElementById("manualTaskInput");
 const assignmentType = document.getElementById("assignmentType");
 const assignTask = document.getElementById("assignTask");
 const refreshTaskAssignment = document.getElementById("refreshTaskAssignment");
@@ -280,7 +282,7 @@ ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
     // Cache tasks
     cachedTasks = tasks;
     
-    taskToAssign.innerHTML = '<option value="">Select a task</option>';
+    taskToAssign.innerHTML = '<option value="">Select a task</option><option value="manual">Manuel Task Gir</option>';
     tasks.forEach((task) => {
       const option = document.createElement("option");
       option.value = task.key;
@@ -337,6 +339,17 @@ testMode.addEventListener("change", () => {
 // Sayfa yüklendiğinde test modu durumunu yükle
 testMode.checked = localStorage.getItem("TEST_MODE_LEAD") === "true";
 
+// Task seçimi değiştiğinde manuel giriş alanını göster/gizle
+taskToAssign.addEventListener("change", () => {
+  if (taskToAssign.value === "manual") {
+    manualTaskContainer.classList.remove("hidden");
+    manualTaskInput.required = true;
+  } else {
+    manualTaskContainer.classList.add("hidden");
+    manualTaskInput.required = false;
+  }
+});
+
 // Task assignment process
 assignTask.addEventListener("click", () => {
   // Stop if button is already disabled
@@ -344,8 +357,16 @@ assignTask.addEventListener("click", () => {
     return;
   }
 
-  if (!taskToAssign.value) {
-    alert("Please select a task!");
+  // Task seçimini kontrol et
+  let selectedTaskKey = taskToAssign.value;
+  if (selectedTaskKey === "manual") {
+    selectedTaskKey = manualTaskInput.value.trim();
+    if (!selectedTaskKey) {
+      alert("Lütfen bir Task ID girin!");
+      return;
+    }
+  } else if (!selectedTaskKey) {
+    alert("Lütfen bir task seçin!");
     return;
   }
 
@@ -425,7 +446,7 @@ assignTask.addEventListener("click", () => {
 
     // Assign task using cached data
     ipcRenderer.send("assign-task", {
-      taskKey: taskToAssign.value,
+      taskKey: selectedTaskKey,
       selectedUserId: selectedUserId,
       cachedUsers: cachedUsers,
       cachedTasks: cachedTasks,
