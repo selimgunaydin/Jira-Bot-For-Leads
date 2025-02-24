@@ -649,6 +649,7 @@ function logSummary(totalUsers, lowPerformers, performanceType, workDaysUntilTod
       logger.info(`  ├─ Güncel Hedef: ${currentTargetPoints.toFixed(1)}`);
       logger.info(`  ├─ Aylık Hedef: ${user.targetPoints}`);
       logger.info(`  └─ Performans: ${user.currentCompletionRatio.toFixed(1)}%`);
+      logger.info(`  └─ Durum: ${user.hasInProgressTasks ? '🔄 In Progress Taskı Var' : '✅ Müsait'}`);
     });
   }
   
