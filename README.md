@@ -5,9 +5,9 @@ Bu uygulama, Jira projelerindeki görevlerin otomatik olarak atanmasını ve yö
 ## Özellikler
 
 - Atanmamış görevleri otomatik listeleme
-- Aktif developerları görüntüleme
+- Aktif Developerları görüntüleme
 - Görev puanlarına göre otomatik atama
-- developer iş yükü dengeleme
+- Developer iş yükü dengeleme
 - Gerçek zamanlı görev takibi
 
 ## Kurulum

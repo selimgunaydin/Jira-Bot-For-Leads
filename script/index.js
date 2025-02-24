@@ -107,7 +107,7 @@ let userPointsCache = {
 };
 let userPointsData = [];
 let lowPerformers = [];
-let performanceType = "done"; // Varsayılan performans hesaplama tipi
+let performanceType = localStorage.getItem("PERFORMANCE_TYPE_LEAD") || "done"; // Varsayılan performans hesaplama tipi
 
 // Buton durumunu kontrol et
 function checkButtonState() {
@@ -164,10 +164,14 @@ refreshTaskAssignment.addEventListener("click", refreshTaskAssignmentArea);
 // Performans tipini değiştirme
 document.getElementById("performanceType").addEventListener("change", async (e) => {
     performanceType = e.target.value;
+    localStorage.setItem("PERFORMANCE_TYPE_LEAD", performanceType);
     await calculateUserPoints();
 });
 
-// developer puanlarını hesapla
+// Sayfa yüklendiğinde performans tipini seç
+document.getElementById("performanceType").value = performanceType;
+
+// Developer puanlarını hesapla
 async function calculateUserPoints() {
   isCalculating = true;
   checkButtonState();
@@ -288,7 +292,7 @@ ipcRenderer.on("user-points-calculated", (event, data) => {
     userPointsData = newUserPointsData;
     lowPerformers = newLowPerformers;
     
-    // developer listesini güncelle ve tamamlanma oranlarını göster
+    // Developer listesini güncelle ve tamamlanma oranlarını göster
     assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
     userPointsData.forEach((userData) => {
         const option = document.createElement("option");
@@ -338,61 +342,61 @@ assignTask.addEventListener("click", () => {
     return;
   }
 
-  // Seçilen developeryı belirle
+  // Seçilen Developeryı belirle
   let selectedUserId = null;
   let selectedUser = null;
 
   try {
-    // In-progress'te işi olmayan developerları filtrele
+    // In-progress'te işi olmayan Developerları filtrele
     const availableUsers = userPointsData.filter(user => !user.hasInProgressTasks);
 
     if (availableUsers.length === 0) {
-      alert("Atama yapılabilecek uygun developer bulunamadı! Tüm developerların üzerinde in-progress task var.");
+      alert("Atama yapılabilecek uygun Developer bulunamadı! Tüm Developerların üzerinde in-progress task var.");
       return;
     }
 
     switch (assignmentType.value) {
       case "specific":
         if (!assigneeUser.value) {
-          alert("Lütfen bir developer seçin!");
+          alert("Lütfen bir Developer seçin!");
           return;
         }
         selectedUserId = assigneeUser.value;
         selectedUser = userPointsData.find(u => u.accountId === selectedUserId);
         if (selectedUser?.hasInProgressTasks) {
-          alert("Seçilen developernın üzerinde in-progress task var!");
+          alert("Seçilen Developernın üzerinde in-progress task var!");
           return;
         }
         break;
 
       case "under_80":
-        // Performansı %80'in üzerinde olan ve in-progress'te işi olmayan developerları filtrele
+        // Performansı %80'in üzerinde olan ve in-progress'te işi olmayan Developerları filtrele
         const highPerformers = availableUsers.filter(user => user.currentCompletionRatio <= 80);
         if (highPerformers.length > 0) {
           selectedUser = highPerformers[Math.floor(Math.random() * highPerformers.length)];
           selectedUserId = selectedUser.accountId;
         } else {
-          alert("Performansı %80'in altında olan ve uygun durumda developer bulunamadı!");
+          alert("Performansı %80'in altında olan ve uygun durumda Developer bulunamadı!");
           return;
         }
         break;
 
       case "lowest_done":
-        // Done puanı en düşük ve in-progress'te işi olmayan developer
+        // Done puanı en düşük ve in-progress'te işi olmayan Developer
         selectedUser = availableUsers.reduce((min, user) => 
           !min || user.donePoints < min.donePoints ? user : min, null);
         selectedUserId = selectedUser.accountId;
         break;
 
       case "lowest_total":
-        // Toplam puanı en düşük ve in-progress'te işi olmayan developer
+        // Toplam puanı en düşük ve in-progress'te işi olmayan Developer
         selectedUser = availableUsers.reduce((min, user) => 
           !min || user.totalPoints < min.totalPoints ? user : min, null);
         selectedUserId = selectedUser.accountId;
         break;
 
       case "random":
-        // In-progress'te işi olmayan developerlar arasından rastgele seç
+        // In-progress'te işi olmayan Developerlar arasından rastgele seç
         selectedUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
         selectedUserId = selectedUser.accountId;
         break;
@@ -403,7 +407,7 @@ assignTask.addEventListener("click", () => {
     }
 
     if (!selectedUserId || !selectedUser) {
-      alert("Uygun developer bulunamadı!");
+      alert("Uygun Developer bulunamadı!");
       return;
     }
 
@@ -449,7 +453,7 @@ ipcRenderer.on("task-assigned", (event, result) => {
     if (result.activeTasks && result.activeTasks.length > 0) {
       const taskList = result.activeTasks.join("\n");
       alert(
-        `developernın üzerinde aktif task'lar olduğu için atama yapılamadı.\n\nAktif Task'lar:\n${taskList}`
+        `Developernın üzerinde aktif task'lar olduğu için atama yapılamadı.\n\nAktif Task'lar:\n${taskList}`
       );
     } else {
       alert(result.error || "Task atama işlemi başarısız oldu!");

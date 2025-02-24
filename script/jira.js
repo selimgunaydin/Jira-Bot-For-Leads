@@ -80,9 +80,9 @@ async function hasInProgressTasks(accountId) {
 
 async function getProjectUsers() {
   try {
-    logger.info("Proje developerları yükleniyor..");
+    logger.info("Proje Developerları yükleniyor..");
 
-    // Son 3 ayda projede aktif olan developerları bulmak için JQL sorgusu
+    // Son 3 ayda projede aktif olan Developerları bulmak için JQL sorgusu
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 1);
 
@@ -100,7 +100,7 @@ async function getProjectUsers() {
       }
     );
 
-    // Task'lardan benzersiz developer ID'lerini çıkar
+    // Task'lardan benzersiz Developer ID'lerini çıkar
     const activeUserIds = new Set();
     tasksResponse.data.issues.forEach((issue) => {
       if (issue.fields.assignee && issue.fields.assignee.accountId) {
@@ -115,7 +115,7 @@ async function getProjectUsers() {
           .filter((email) => email.length > 0)
       : [];
 
-    // Aktif developerların detaylarını çek
+    // Aktif Developerların detaylarını çek
     const activeUsers = [];
     for (const accountId of activeUserIds) {
       try {
@@ -142,17 +142,17 @@ async function getProjectUsers() {
         }
       } catch (error) {
         logger.error(
-          `developer detayları çekilemedi (${accountId}): ${error.message}`
+          `Developer detayları çekilemedi (${accountId}): ${error.message}`
         );
       }
     }
 
-    logger.info(`Toplam ${activeUsers.length} aktif developer bulundu.`);
+    logger.info(`Toplam ${activeUsers.length} aktif Developer bulundu.`);
 
     return activeUsers;
   } catch (error) {
     logger.error(
-      `Hata oluştu (developer çekme): ${
+      `Hata oluştu (Developer çekme): ${
         error.response ? JSON.stringify(error.response.data) : error.message
       }`
     );
@@ -183,7 +183,7 @@ async function getUserAllTasks(accountId) {
     return response.data.issues;
   } catch (error) {
     logger.error(
-      `Hata oluştu (developer tüm taskları çekme): ${
+      `Hata oluştu (Developer tüm taskları çekme): ${
         error.response ? JSON.stringify(error.response.data) : error.message
       }`
     );
@@ -319,7 +319,7 @@ async function assignTaskToUser(taskKey, selectedUserId, comment, moveToSelected
   try {
     // Eğer under_80 seçeneği seçilmişse
     if (assignmentType === "under_80") {
-      // Düşük performanslı developerları al
+      // Düşük performanslı Developerları al
       const lowPerformers = await new Promise((resolve) => {
         if (global.mainWindow) {
           global.mainWindow.webContents.executeJavaScript(
@@ -333,30 +333,30 @@ async function assignTaskToUser(taskKey, selectedUserId, comment, moveToSelected
         }
       });
       
-      // In progress'te işi olmayan düşük performanslı developeryı bul
+      // In progress'te işi olmayan düşük performanslı Developeryı bul
       const availableLowPerformer = lowPerformers.find(user => !user.hasInProgressTasks);
       
       if (availableLowPerformer) {
         selectedUserId = availableLowPerformer.accountId;
       } else {
-        // Eğer uygun developer yoksa Selected for Development'a taşı
+        // Eğer uygun Developer yoksa Selected for Development'a taşı
         await updateTaskStatus(taskKey, "Selected for Development");
         return {
           success: false,
-          message: "Uygun düşük performanslı developer bulunamadı. Task 'Selected for Development' durumuna taşındı."
+          message: "Uygun düşük performanslı Developer bulunamadı. Task 'Selected for Development' durumuna taşındı."
         };
       }
     }
 
-    // developernın aktif task'larını kontrol et
+    // Developernın aktif task'larını kontrol et
     const activeTaskCheck = await hasActiveTask(selectedUserId);
 
     if (activeTaskCheck.hasActive) {
       const taskList = activeTaskCheck.tasks.join("\n");
-      logger.warn(`developernın üzerinde aktif task'lar var:\n${taskList}`);
+      logger.warn(`Developernın üzerinde aktif task'lar var:\n${taskList}`);
       return {
         success: false,
-        error: "developernın üzerinde aktif task'lar var",
+        error: "Developernın üzerinde aktif task'lar var",
         activeTasks: activeTaskCheck.tasks,
       };
     }
@@ -382,7 +382,7 @@ async function assignTaskToUser(taskKey, selectedUserId, comment, moveToSelected
       await updateTaskStatus(taskKey, "Selected for Development");
     }
 
-    logger.info(`Task ${taskKey} başarıyla ${selectedUserId} developersına atandı.`);
+    logger.info(`Task ${taskKey} başarıyla ${selectedUserId} Developersına atandı.`);
     return {
       success: true,
     };
@@ -446,7 +446,7 @@ async function getUserWithLowestPoints(users, type = "done") {
   return lowestPointsUser;
 }
 
-// developer puanlarını hesapla
+// Developer puanlarını hesapla
 async function calculateUserPoints(users, performanceType = "done") {
   try {
     let userPointsData = [];
@@ -561,7 +561,7 @@ async function calculateUserPoints(users, performanceType = "done") {
       }
     }
 
-    // Düşük performanslı developerları main window'a kaydet
+    // Düşük performanslı Developerları main window'a kaydet
     if (global.mainWindow) {
       await global.mainWindow.webContents.executeJavaScript(
         `localStorage.setItem('lowPerformers', '${JSON.stringify(lowPerformers)}')`,
@@ -570,8 +570,21 @@ async function calculateUserPoints(users, performanceType = "done") {
     }
 
     logger.info("\n=== Özet ===");
-    logger.info(`Toplam developer: ${users.length}`);
-    logger.info(`Düşük Performanslı developer: ${lowPerformers.length}`);
+    logger.info(`Toplam Developer: ${users.length}`);
+    logger.info(`Düşük Performanslı Developer: ${lowPerformers.length}`);
+    
+    if (lowPerformers.length > 0) {
+      logger.info("\n=== Düşük Performanslı Developerlar ===");
+      lowPerformers.forEach(user => {
+        const currentTargetPoints = (user.targetPoints * workDaysUntilToday) / totalWorkDays;
+        logger.info(`${user.displayName}:`);
+        logger.info(`  ├─ ${performanceType === "done" ? "Done" : "Total"} Points: ${user.calculatedPoints}`);
+        logger.info(`  ├─ Güncel Hedef: ${currentTargetPoints.toFixed(1)}`);
+        logger.info(`  ├─ Aylık Hedef: ${user.targetPoints}`);
+        logger.info(`  └─ Performans: ${user.currentCompletionRatio.toFixed(1)}%`);
+      });
+    }
+    
     logger.info("=== Hesaplama Tamamlandı ===\n");
 
     return {
@@ -579,7 +592,7 @@ async function calculateUserPoints(users, performanceType = "done") {
       lowPerformers
     };
   } catch (error) {
-    logger.error(`developer puanları hesaplanırken hata oluştu: ${error.message}`);
+    logger.error(`Developer puanları hesaplanırken hata oluştu: ${error.message}`);
     return {
       userPointsData: [],
       lowPerformers: []
@@ -593,7 +606,7 @@ ipcMain.on("get-project-users", async (event) => {
     const users = await getProjectUsers();
     event.reply("project-users-data", users);
   } catch (error) {
-    logger.error(`developer listesi alınırken hata oluştu: ${error.message}`);
+    logger.error(`Developer listesi alınırken hata oluştu: ${error.message}`);
     event.reply("project-users-data", []);
   }
 });
@@ -614,7 +627,7 @@ ipcMain.on("assign-task", async (event, data) => {
     const selectedUser = cachedUsers.find(user => user.accountId === selectedUserId);
 
     if (!selectedUser) {
-      logger.error("developer bulunamadı!");
+      logger.error("Developer bulunamadı!");
       return;
     }
 
@@ -624,21 +637,21 @@ ipcMain.on("assign-task", async (event, data) => {
       // Test modunda gerçek atama yapmadan simülasyon yap
       logger.info("=== TEST MODU ===");
       logger.info(`Task ${taskKey} için simülasyon yapılıyor...`);
-      logger.info(`Seçilen developer: ${selectedUser.displayName} (${selectedUser.accountId})`);
+      logger.info(`Seçilen Developer: ${selectedUser.displayName} (${selectedUser.accountId})`);
       
       // Aktif task kontrolü simülasyonu
       const activeTaskCheck = await hasActiveTask(selectedUser.accountId);
       if (activeTaskCheck.hasActive) {
         const taskList = activeTaskCheck.tasks.join("\n");
-        logger.warn(`[TEST] developernın üzerinde aktif task'lar var:\n${taskList}`);
+        logger.warn(`[TEST] Developernın üzerinde aktif task'lar var:\n${taskList}`);
         result = {
           success: false,
-          error: "developernın üzerinde aktif task'lar var",
+          error: "Developernın üzerinde aktif task'lar var",
           activeTasks: activeTaskCheck.tasks,
         };
       } else {
         // Başarılı atama simülasyonu
-        logger.info(`[TEST] Task ${taskKey} başarıyla ${selectedUser.displayName} developersına atanacaktı`);
+        logger.info(`[TEST] Task ${taskKey} başarıyla ${selectedUser.displayName} Developersına atanacaktı`);
         if (comment) {
           logger.info(`[TEST] Task'a eklenecek yorum: "${comment}"`);
         }
@@ -662,7 +675,7 @@ ipcMain.on("assign-task", async (event, data) => {
 
       event.reply("task-assigned", {
         success: true,
-        message: `Task ${taskKey} başarıyla ${selectedUser.displayName} developersına atandı.`,
+        message: `Task ${taskKey} başarıyla ${selectedUser.displayName} Developersına atandı.`,
       });
 
       // UI'ı güncelle
@@ -686,12 +699,12 @@ ipcMain.on("assign-task", async (event, data) => {
 
 ipcMain.on("calculate-user-points", async (event, { users, performanceType }) => {
   try {
-    logger.info("developer puanları hesaplanıyor...");
+    logger.info("Developer puanları hesaplanıyor...");
     const userPoints = await calculateUserPoints(users, performanceType);
-    logger.info("developer puanları hesaplandı.");
+    logger.info("Developer puanları hesaplandı.");
     event.reply("user-points-calculated", userPoints);
   } catch (error) {
-    logger.error(`developer puanları hesaplanırken hata oluştu: ${error.message}`);
+    logger.error(`Developer puanları hesaplanırken hata oluştu: ${error.message}`);
     event.reply("user-points-calculated", {
       userPointsData: [],
       lowPerformers: []
