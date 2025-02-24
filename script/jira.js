@@ -488,33 +488,9 @@ async function calculateUserPoints(users, performanceType = "done") {
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     
-    // Ay başından bugüne kadar olan iş günü sayısı
-    let workDaysUntilToday = 0;
-    let currentDay = new Date(firstDayOfMonth);
-
-    // Bugünün başlangıcını al (saat 00:00:00)
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-    // Ay başından bugüne kadar olan iş günlerini say
-    while (currentDay <= todayStart) {
-      const dayOfWeek = currentDay.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0=Pazar, 6=Cumartesi
-        workDaysUntilToday++;
-      }
-      currentDay.setDate(currentDay.getDate() + 1);
-    }
-
-    // Ay içindeki toplam iş günü sayısı
-    let totalWorkDays = 0;
-    currentDay = new Date(firstDayOfMonth);
-    while (currentDay <= lastDayOfMonth) {
-      const dayOfWeek = currentDay.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        totalWorkDays++;
-      }
-      currentDay.setDate(currentDay.getDate() + 1);
-    }
-
+    // İş günü hesaplamalarını tek seferde yap
+    const { workDaysUntilToday, totalWorkDays } = calculateWorkDays(firstDayOfMonth, lastDayOfMonth, today);
+    
     // Beklenen tamamlanma oranı (iş günü bazlı)
     const expectedCompletionRatio = (workDaysUntilToday / totalWorkDays) * 100;
 
@@ -524,47 +500,23 @@ async function calculateUserPoints(users, performanceType = "done") {
     logger.info(`Bugüne kadar geçen iş günü: ${workDaysUntilToday}`);
     logger.info(`Beklenen tamamlanma oranı: ${expectedCompletionRatio.toFixed(1)}%\n`);
 
-    for (const user of users) {
+    // Tüm hedef puanları tek seferde al
+    const targetPointsMap = await getTargetPointsForUsers(users);
+
+    // Tüm kullanıcıların task'larını paralel olarak çek
+    const userDataPromises = users.map(async user => {
       const tasks = await getUserAllTasks(user.accountId);
-      let donePoints = 0;
-      let totalPoints = 0;
-
-      tasks.forEach(task => {
-        const points = task.fields.customfield_10028 || 0;
-        if (task.fields.status.name === "Done") {
-          donePoints += points;
-        }
-        totalPoints += points;
-      });
-
-      // Hedef puanı main window'dan al
-      const targetPoints = await new Promise((resolve) => {
-        if (global.mainWindow) {
-          global.mainWindow.webContents.executeJavaScript(
-            `localStorage.getItem("targetPoints-${user.emailAddress}")`,
-            true
-          ).then(result => {
-            if (!result) {
-              logger.warn(`${user.displayName} için hedef puan bulunamadı!`);
-            }
-            resolve(parseInt(result) || 0);
-          });
-        } else {
-          resolve(0);
-        }
-      });
-
-      // Performans hesaplama tipine göre puanları belirle
+      const { donePoints, totalPoints } = calculatePoints(tasks);
+      
+      const targetPoints = targetPointsMap.get(user.emailAddress) || 0;
       const calculatedPoints = performanceType === "done" ? donePoints : totalPoints;
       
-      // Toplam tamamlanma oranı
+      // Oranları hesapla
       const completionRatio = targetPoints > 0 ? (calculatedPoints / targetPoints) * 100 : 0;
-      
-      // Güncel hedefe göre tamamlanma oranı
       const currentTargetPoints = (targetPoints * workDaysUntilToday) / totalWorkDays;
       const currentCompletionRatio = currentTargetPoints > 0 ? (calculatedPoints / currentTargetPoints) * 100 : 0;
 
-      const userData = {
+      return {
         ...user,
         donePoints,
         totalPoints,
@@ -573,26 +525,22 @@ async function calculateUserPoints(users, performanceType = "done") {
         currentCompletionRatio,
         calculatedPoints
       };
+    });
 
-      userPointsData.push(userData);
+    // Tüm kullanıcı verilerini paralel olarak işle
+    userPointsData = await Promise.all(userDataPromises);
 
-      // Log user stats
-      logger.info(`${user.displayName}:`);
-      logger.info(`  ├─ Done Points: ${donePoints}`);
-      logger.info(`  ├─ Total Points: ${totalPoints}`);
-      logger.info(`  ├─ Target Points: ${targetPoints}`);
-      logger.info(`  ├─ Current Target Points: ${currentTargetPoints.toFixed(1)}`);
-      logger.info(`  ├─ Overall Completion: ${completionRatio.toFixed(1)}%`);
-      logger.info(`  └─ Current Completion: ${currentCompletionRatio.toFixed(1)}%`);
-
-      // %80'in altında olanları ayrı bir listede tut
-      if (currentCompletionRatio < 80) {
+    // Kullanıcı verilerini logla ve düşük performanslıları belirle
+    userPointsData.forEach(userData => {
+      logUserStats(userData, workDaysUntilToday, totalWorkDays);
+      
+      if (userData.currentCompletionRatio < 80) {
         lowPerformers.push(userData);
-        logger.warn(`  ⚠️ Düşük performans! (${currentCompletionRatio.toFixed(1)}% < 80%)`);
+        logger.warn(`  ⚠️ Düşük performans! (${userData.currentCompletionRatio.toFixed(1)}% < 80%)`);
       }
-    }
+    });
 
-    // Düşük performanslı Developerları main window'a kaydet
+    // Düşük performanslı Developerları kaydet
     if (global.mainWindow) {
       await global.mainWindow.webContents.executeJavaScript(
         `localStorage.setItem('lowPerformers', '${JSON.stringify(lowPerformers)}')`,
@@ -600,23 +548,8 @@ async function calculateUserPoints(users, performanceType = "done") {
       );
     }
 
-    logger.info("\n=== Özet ===");
-    logger.info(`Toplam Developer: ${users.length}`);
-    logger.info(`Düşük Performanslı Developer: ${lowPerformers.length}`);
-    
-    if (lowPerformers.length > 0) {
-      logger.info("\n=== Düşük Performanslı Developerlar ===");
-      lowPerformers.forEach(user => {
-        const currentTargetPoints = (user.targetPoints * workDaysUntilToday) / totalWorkDays;
-        logger.info(`${user.displayName}:`);
-        logger.info(`  ├─ ${performanceType === "done" ? "Done" : "Total"} Points: ${user.calculatedPoints}`);
-        logger.info(`  ├─ Güncel Hedef: ${currentTargetPoints.toFixed(1)}`);
-        logger.info(`  ├─ Aylık Hedef: ${user.targetPoints}`);
-        logger.info(`  └─ Performans: ${user.currentCompletionRatio.toFixed(1)}%`);
-      });
-    }
-    
-    logger.info("=== Hesaplama Tamamlandı ===\n");
+    // Özet logları
+    logSummary(users.length, lowPerformers, performanceType, workDaysUntilToday, totalWorkDays);
 
     return {
       userPointsData,
@@ -629,6 +562,97 @@ async function calculateUserPoints(users, performanceType = "done") {
       lowPerformers: []
     };
   }
+}
+
+// Yardımcı fonksiyonlar
+function calculateWorkDays(firstDayOfMonth, lastDayOfMonth, today) {
+  let workDaysUntilToday = 0;
+  let totalWorkDays = 0;
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  // Ay başından bugüne kadar olan iş günlerini say
+  let currentDay = new Date(firstDayOfMonth);
+  while (currentDay <= todayStart) {
+    const dayOfWeek = currentDay.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      workDaysUntilToday++;
+    }
+    currentDay.setDate(currentDay.getDate() + 1);
+  }
+
+  // Ay içindeki toplam iş günü sayısı
+  currentDay = new Date(firstDayOfMonth);
+  while (currentDay <= lastDayOfMonth) {
+    const dayOfWeek = currentDay.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      totalWorkDays++;
+    }
+    currentDay.setDate(currentDay.getDate() + 1);
+  }
+
+  return { workDaysUntilToday, totalWorkDays };
+}
+
+async function getTargetPointsForUsers(users) {
+  const targetPointsMap = new Map();
+  
+  if (global.mainWindow) {
+    const promises = users.map(async user => {
+      const value = await global.mainWindow.webContents.executeJavaScript(
+        `localStorage.getItem("targetPoints-${user.emailAddress}")`,
+        true
+      );
+      if (value) {
+        targetPointsMap.set(user.emailAddress, parseInt(value));
+      }
+    });
+    
+    await Promise.all(promises);
+  }
+  
+  return targetPointsMap;
+}
+
+function calculatePoints(tasks) {
+  return tasks.reduce((acc, task) => {
+    const points = task.fields.customfield_10028 || 0;
+    if (task.fields.status.name === "Done") {
+      acc.donePoints += points;
+    }
+    acc.totalPoints += points;
+    return acc;
+  }, { donePoints: 0, totalPoints: 0 });
+}
+
+function logUserStats(userData, workDaysUntilToday, totalWorkDays) {
+  const currentTargetPoints = (userData.targetPoints * workDaysUntilToday) / totalWorkDays;
+  logger.info(`${userData.displayName}:`);
+  logger.info(`  ├─ Done Points: ${userData.donePoints}`);
+  logger.info(`  ├─ Total Points: ${userData.totalPoints}`);
+  logger.info(`  ├─ Target Points: ${userData.targetPoints}`);
+  logger.info(`  ├─ Current Target Points: ${currentTargetPoints.toFixed(1)}`);
+  logger.info(`  ├─ Overall Completion: ${userData.completionRatio.toFixed(1)}%`);
+  logger.info(`  └─ Current Completion: ${userData.currentCompletionRatio.toFixed(1)}%`);
+}
+
+function logSummary(totalUsers, lowPerformers, performanceType, workDaysUntilToday, totalWorkDays) {
+  logger.info("\n=== Özet ===");
+  logger.info(`Toplam Developer: ${totalUsers}`);
+  logger.info(`Düşük Performanslı Developer: ${lowPerformers.length}`);
+  
+  if (lowPerformers.length > 0) {
+    logger.info("\n=== Düşük Performanslı Developerlar ===");
+    lowPerformers.forEach(user => {
+      const currentTargetPoints = (user.targetPoints * workDaysUntilToday) / totalWorkDays;
+      logger.info(`${user.displayName}:`);
+      logger.info(`  ├─ ${performanceType === "done" ? "Done" : "Total"} Points: ${user.calculatedPoints}`);
+      logger.info(`  ├─ Güncel Hedef: ${currentTargetPoints.toFixed(1)}`);
+      logger.info(`  ├─ Aylık Hedef: ${user.targetPoints}`);
+      logger.info(`  └─ Performans: ${user.currentCompletionRatio.toFixed(1)}%`);
+    });
+  }
+  
+  logger.info("=== Hesaplama Tamamlandı ===\n");
 }
 
 // IPC Event Listeners
