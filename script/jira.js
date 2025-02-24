@@ -86,30 +86,6 @@ async function getProjectUsers() {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-
-
-    const jqlQuery = `project = "${PROJECT_KEY}" AND assignee IS NOT EMPTY AND updated >= "${
-      oneMonthAgo.toISOString().split("T")[0]
-    }"`;
-
-    // Önce son 1 ayda aktif olan taskları çek
-    const tasksResponse = await axios.get(
-      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(
-        jqlQuery
-      )}&maxResults=100`,
-      {
-        auth: { username: EMAIL, password: API_TOKEN },
-      }
-    );
-
-    // Task'lardan benzersiz Developer ID'lerini çıkar
-    const activeUserIds = new Set();
-    tasksResponse.data.issues.forEach((issue) => {
-      if (issue.fields.assignee && issue.fields.assignee.accountId) {
-        activeUserIds.add(issue.fields.assignee.accountId);
-      }
-    });
-
     // Hariç tutulacak e-postaları diziye çevir ve boşlukları temizle
     const excludedEmailList = EXCLUDED_EMAILS
       ? EXCLUDED_EMAILS.split(/[\n\r]+/)
@@ -117,38 +93,54 @@ async function getProjectUsers() {
           .filter((email) => email.length > 0)
       : [];
 
-    // Aktif Developerların detaylarını çek
-    const activeUsers = [];
-    for (const accountId of activeUserIds) {
-      try {
-        const userResponse = await axios.get(
-          `${JIRA_BASE_URL}/rest/api/3/user?accountId=${accountId}`,
-          {
-            auth: { username: EMAIL, password: API_TOKEN },
-          }
-        );
+    // Daha spesifik JQL sorgusu - sadece aktif kullanıcıları getir
+    const jqlQuery = `project = "${PROJECT_KEY}" 
+      AND assignee IS NOT EMPTY 
+      AND updated >= "${oneMonthAgo.toISOString().split("T")[0]}"
+      AND assignee not in (addon, system)`;
 
-        const user = userResponse.data;
-        if (
-          user.active &&
-          !user.displayName.includes("addon") &&
-          !user.displayName.toLowerCase().includes("bot") &&
-          !user.displayName.toLowerCase().includes("system") &&
-          !excludedEmailList.includes(user.emailAddress.toLowerCase())
-        ) {
-          const hasInProgress = await hasInProgressTasks(accountId);
-          activeUsers.push({
-            ...user,
-            hasInProgressTasks: hasInProgress,
+    // Tüm taskları tek seferde çek
+    const tasksResponse = await axios.get(
+      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=100&fields=assignee`,
+      {
+        auth: { username: EMAIL, password: API_TOKEN },
+      }
+    );
+
+    // Benzersiz kullanıcı ID'lerini ve bilgilerini topla
+    const uniqueUsers = new Map();
+    tasksResponse.data.issues.forEach((issue) => {
+      if (issue.fields.assignee) {
+        const user = issue.fields.assignee;
+        if (!uniqueUsers.has(user.accountId)) {
+          uniqueUsers.set(user.accountId, {
+            accountId: user.accountId,
+            displayName: user.displayName,
+            emailAddress: user.emailAddress,
+            active: user.active
           });
         }
-      } catch (error) {
-        logger.error(
-          `Developer detayları çekilemedi (${accountId}): ${error.message}`
-        );
       }
-    }
+    });
 
+    // Filtrele ve paralel olarak in-progress durumlarını kontrol et
+    const userPromises = Array.from(uniqueUsers.values())
+      .filter(user => 
+        user.active &&
+        !user.displayName.includes("addon") &&
+        !user.displayName.toLowerCase().includes("bot") &&
+        !user.displayName.toLowerCase().includes("system") &&
+        !excludedEmailList.includes(user.emailAddress.toLowerCase())
+      )
+      .map(async (user) => {
+        const hasInProgress = await hasInProgressTasks(user.accountId);
+        return {
+          ...user,
+          hasInProgressTasks: hasInProgress
+        };
+      });
+
+    const activeUsers = await Promise.all(userPromises);
     logger.info(`Toplam ${activeUsers.length} aktif Developer bulundu.`);
 
     return activeUsers;
