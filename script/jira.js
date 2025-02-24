@@ -82,15 +82,17 @@ async function getProjectUsers() {
   try {
     logger.info("Proje Developerları yükleniyor..");
 
-    // Son 3 ayda projede aktif olan Developerları bulmak için JQL sorgusu
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 1);
+    // Son 1 ayda projede aktif olan Developerları bulmak için JQL sorgusu
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+
 
     const jqlQuery = `project = "${PROJECT_KEY}" AND assignee IS NOT EMPTY AND updated >= "${
-      threeMonthsAgo.toISOString().split("T")[0]
+      oneMonthAgo.toISOString().split("T")[0]
     }"`;
 
-    // Önce son 3 ayda aktif olan taskları çek
+    // Önce son 1 ayda aktif olan taskları çek
     const tasksResponse = await axios.get(
       `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(
         jqlQuery
