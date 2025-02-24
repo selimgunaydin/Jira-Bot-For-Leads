@@ -165,11 +165,48 @@ async function getUserAllTasks(accountId) {
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 2);
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-  const jqlQuery = `project = "${PROJECT_KEY}" 
-    AND assignee = ${accountId}
-    AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
-    AND updated <= "${lastDayOfMonth.toISOString().split("T")[0]}" 
-    ORDER BY updated DESC`;
+  // Kullanıcının e-posta adresini al
+  let userEmail = '';
+  try {
+    const userResponse = await axios.get(
+      `${JIRA_BASE_URL}/rest/api/3/user?accountId=${accountId}`,
+      {
+        auth: { username: EMAIL, password: API_TOKEN },
+      }
+    );
+    userEmail = userResponse.data.emailAddress.toLowerCase();
+  } catch (error) {
+    logger.error(`Kullanıcı e-posta adresi alınamadı: ${error.message}`);
+  }
+
+  // PROJECT_KEY filtresi olmadan hesaplanacak kullanıcıları al
+  const excludedEmails = global.mainWindow ? 
+    await global.mainWindow.webContents.executeJavaScript(
+      `localStorage.getItem('EXCLUDED_FROM_PROJECT_KEY_FILTER')`,
+      true
+    ) : '';
+  
+  const excludedEmailList = excludedEmails
+    ? excludedEmails.split(/[\n\r]+/).map(email => email.trim().toLowerCase())
+    : [];
+
+  // JQL sorgusunu oluştur
+  let jqlQuery = '';
+  if (excludedEmailList.includes(userEmail)) {
+    // PROJECT_KEY filtresi olmadan
+    jqlQuery = `assignee = ${accountId}
+      AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
+      AND updated <= "${lastDayOfMonth.toISOString().split("T")[0]}" 
+      ORDER BY updated DESC`;
+    logger.info(`${userEmail} için PROJECT_KEY filtresi olmadan puanlar hesaplanıyor...`);
+  } else {
+    // Normal sorgu (PROJECT_KEY filtresi ile)
+    jqlQuery = `project = "${PROJECT_KEY}" 
+      AND assignee = ${accountId}
+      AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
+      AND updated <= "${lastDayOfMonth.toISOString().split("T")[0]}" 
+      ORDER BY updated DESC`;
+  }
 
   try {
     const response = await axios.get(
