@@ -399,9 +399,9 @@ assignTask.addEventListener("click", () => {
 
       case "under_80":
         // Performansı %80'in üzerinde olan ve in-progress'te işi olmayan Developerları filtrele
-        const highPerformers = availableUsers.filter(user => user.currentCompletionRatio <= 80);
-        if (highPerformers.length > 0) {
-          selectedUser = highPerformers[Math.floor(Math.random() * highPerformers.length)];
+        const lowPerformers = availableUsers.filter(user => user.currentCompletionRatio <= 80);
+        if (lowPerformers.length > 0) {
+          selectedUser = lowPerformers[Math.floor(Math.random() * lowPerformers.length)];
           selectedUserId = selectedUser.accountId;
         } else {
           alert("Performansı %80'in altında olan ve uygun durumda Developer bulunamadı!");
