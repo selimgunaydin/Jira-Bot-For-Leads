@@ -296,6 +296,134 @@ ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
   }
 });
 
+// Leaderboard sıralama seçeneği
+const leaderboardOrder = document.getElementById("leaderboardOrder");
+let currentOrder = localStorage.getItem("LEADERBOARD_ORDER") || "done";
+leaderboardOrder.value = currentOrder;
+
+// Sıralama değiştiğinde
+leaderboardOrder.addEventListener("change", () => {
+    currentOrder = leaderboardOrder.value;
+    localStorage.setItem("LEADERBOARD_ORDER", currentOrder);
+    if (userPointsData.length > 0) {
+        updateLeaderboard(userPointsData, currentOrder);
+    }
+});
+
+// Leaderboard güncelleme fonksiyonu
+function updateLeaderboard(userPointsData, orderBy = currentOrder) {
+    const leaderboard = document.getElementById("leaderboard");
+    
+    // Puanlara göre sırala
+    const sortedUsers = [...userPointsData].sort((a, b) => {
+        const pointsA = orderBy === "done" ? a.donePoints : a.totalPoints;
+        const pointsB = orderBy === "done" ? b.donePoints : b.totalPoints;
+        return pointsB - pointsA;
+    });
+
+    // Leaderboard HTML'ini oluştur
+    leaderboard.innerHTML = sortedUsers.map((user, index) => {
+        const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
+        const rank = index + 1;
+        
+        // Done Points için renk ve stil
+        const doneProgressColor = user.currentCompletionRatio >= 100 ? "bg-green-500" : 
+                                user.currentCompletionRatio >= 80 ? "bg-blue-500" : "bg-red-500";
+        const doneTextColor = user.currentCompletionRatio >= 100 ? "text-green-600" : 
+                            user.currentCompletionRatio >= 80 ? "text-blue-600" : "text-red-600";
+        
+        // All Points için renk ve stil hesaplama
+        const allPointsRatio = (user.totalPoints / user.targetPoints) * 100;
+        const allProgressColor = allPointsRatio >= 100 ? "bg-green-500" : 
+                               allPointsRatio >= 80 ? "bg-blue-500" : "bg-red-500";
+        const allTextColor = allPointsRatio >= 100 ? "text-green-600" : 
+                           allPointsRatio >= 80 ? "text-blue-600" : "text-red-600";
+
+        // Seçili puana göre highlight
+        const doneHighlight = orderBy === "done" ? "font-semibold" : "font-medium";
+        const allHighlight = orderBy === "all" ? "font-semibold" : "font-medium";
+
+        // Kart için stil
+        const isTopThree = index < 3;
+        const borderColor = isTopThree ? 
+            (index === 0 ? 'border-l-yellow-400' : index === 1 ? 'border-l-gray-400' : 'border-l-orange-400') :
+            'border-l-transparent';
+        
+        return `
+            <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 p-4 mb-3 border-l-4 ${borderColor}">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <!-- Sol Bölüm: Kullanıcı Bilgileri -->
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0 text-2xl">${medal}</div>
+                        <div>
+                            <h3 class="font-semibold text-gray-800 text-lg">${user.displayName}</h3>
+                            <div class="grid grid-cols-2 gap-x-6 gap-y-1 mt-2">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-gray-500 text-sm">Done:</span>
+                                    <span class="font-medium text-gray-900 ${doneHighlight}">${user.donePoints}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-gray-500 text-sm">Total:</span>
+                                    <span class="font-medium text-gray-900 ${allHighlight}">${user.totalPoints}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-gray-500 text-sm">Güncel Hedef:</span>
+                                    <span class="font-medium text-gray-900">${user.currentTargetPoints}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-gray-500 text-sm">Toplam Hedef:</span>
+                                    <span class="font-medium text-gray-900">${user.targetPoints}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sağ Bölüm: Performans Göstergeleri -->
+                    <div class="flex items-center space-x-6">
+                        <div class="flex flex-col space-y-4">
+                            ${orderBy === "done" ? `
+                            <!-- Done Performans -->
+                            <div class="flex items-center space-x-3">
+                                <div class="w-32">
+                                    <div class="w-full bg-gray-100 rounded-full h-2">
+                                        <div class="${doneProgressColor} rounded-full h-2 transition-all duration-500" 
+                                             style="width: ${Math.min(user.currentCompletionRatio, 100)}%">
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-medium ${doneTextColor} w-16 text-right">
+                                    ${user.currentCompletionRatio.toFixed(0)}%
+                                </span>
+                            </div>
+                            ` : `
+                            <!-- Total Performans -->
+                            <div class="flex items-center space-x-3">
+                                <div class="w-32">
+                                    <div class="w-full bg-gray-100 rounded-full h-2">
+                                        <div class="${allProgressColor} rounded-full h-2 transition-all duration-500" 
+                                             style="width: ${Math.min(allPointsRatio, 100)}%">
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-medium ${allTextColor} w-16 text-right">
+                                    ${allPointsRatio.toFixed(0)}%
+                                </span>
+                            </div>
+                            `}
+                        </div>
+                        
+                        <!-- Durum İkonu -->
+                        <div class="text-xl">
+                            ${user.hasInProgressTasks ? "🔄" : "✅"}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+// user-points-calculated event listener'ını güncelle
 ipcRenderer.on("user-points-calculated", (event, data) => {
     const { userPointsData: newUserPointsData, lowPerformers: newLowPerformers } = data;
     userPointsData = newUserPointsData;
@@ -311,6 +439,9 @@ ipcRenderer.on("user-points-calculated", (event, data) => {
         }`;
         assigneeUser.appendChild(option);
     });
+
+    // Leaderboard'u güncelle
+    updateLeaderboard(userPointsData, currentOrder);
 
     isCalculating = false;
     checkButtonState();

@@ -353,6 +353,26 @@
                         <div id="logs"
                             class="font-mono text-xs text-gray-700 h-[300px] overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200 break-all">
                         </div>
+                        
+                        <!-- Leaderboard Section -->
+                        <div class="p-4 bg-white border-t border-gray-200">
+                            <div class="max-w-4xl mx-auto">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h2 class="text-2xl font-bold text-gray-800">🏆 Developer Leaderboard</h2>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-sm text-gray-600">Order By:</span>
+                                        <select id="leaderboardOrder" class="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="done">Done Points</option>
+                                            <option value="all">All Points</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="leaderboard" class="space-y-4">
+                                    <!-- Dinamik olarak doldurulacak -->
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End Leaderboard Section -->
                     </div>
                 </div>
             </div>

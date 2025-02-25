@@ -521,6 +521,7 @@ async function calculateUserPoints(users, performanceType = "done") {
         donePoints,
         totalPoints,
         targetPoints,
+        currentTargetPoints,
         completionRatio,
         currentCompletionRatio,
         calculatedPoints
