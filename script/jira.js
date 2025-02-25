@@ -616,10 +616,16 @@ async function getTargetPointsForUsers(users) {
 function calculatePoints(tasks) {
   return tasks.reduce((acc, task) => {
     const points = task.fields.customfield_10028 || 0;
-    if (task.fields.status.name === "Done") {
+    const status = task.fields.status.name;
+    
+    if (status === "Done") {
       acc.donePoints += points;
     }
-    acc.totalPoints += points;
+    
+    if (status !== "Track") {
+      acc.totalPoints += points;
+    }
+    
     return acc;
   }, { donePoints: 0, totalPoints: 0 });
 }
