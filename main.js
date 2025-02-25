@@ -10,12 +10,11 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
     },
-    icon: path.join(__dirname, 'assets/icon.icns')
+    icon: path.join(__dirname, "assets/icon.icns"),
   });
 
   global.mainWindow = win;
   win.loadFile("index.html");
-  win.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {

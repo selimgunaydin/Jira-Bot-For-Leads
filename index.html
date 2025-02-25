@@ -1,414 +1,571 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <title>Jira Yardımcısı</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        ::-webkit-scrollbar {
-            width: 8px;
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+
+      #logs {
+        white-space: pre-line;
+        line-height: 1.5;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
         }
 
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+        to {
+          transform: rotate(360deg);
         }
+      }
 
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
+      .animate-spin {
+        animation: spin 1s linear;
+      }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
+      /* Switch design */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 24px;
+      }
 
-        #logs {
-            white-space: pre-line;
-            line-height: 1.5;
-        }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
 
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 24px;
+      }
 
-            to {
-                transform: rotate(360deg);
-            }
-        }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
 
-        .animate-spin {
-            animation: spin 1s linear;
-        }
+      input:checked + .slider {
+        background-color: #2563eb;
+      }
 
-        /* Switch design */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 48px;
-            height: 24px;
-        }
+      input:focus + .slider {
+        box-shadow: 0 0 1px #2563eb;
+      }
 
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+      input:checked + .slider:before {
+        transform: translateX(24px);
+      }
 
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
+      /* Input focus effects */
+      .focus-ring {
+        transition: all 0.2s ease-in-out;
+      }
 
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
+      .focus-ring:focus {
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        border-color: #2563eb;
+      }
 
-        input:checked+.slider {
-            background-color: #2563eb;
-        }
+      /* Sidebar Styles */
+      .sidebar {
+        position: fixed;
+        left: -320px;
+        top: 0;
+        width: 320px;
+        height: 100vh;
+        background: white;
+        transition: all 0.3s ease-in-out;
+        z-index: 50;
+        box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+      }
 
-        input:focus+.slider {
-            box-shadow: 0 0 1px #2563eb;
-        }
+      .sidebar.open {
+        left: 0;
+      }
 
-        input:checked+.slider:before {
-            transform: translateX(24px);
-        }
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease-in-out;
+        z-index: 40;
+      }
 
-        /* Input focus effects */
-        .focus-ring {
-            transition: all 0.2s ease-in-out;
-        }
+      .overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
 
-        .focus-ring:focus {
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-            border-color: #2563eb;
-        }
+      /* Main content styles */
+      .main-content {
+        position: relative;
+        min-height: 100vh;
+      }
 
-        /* Sidebar Styles */
-        .sidebar {
-            position: fixed;
-            left: -320px;
-            top: 0;
-            width: 320px;
-            height: 100vh;
-            background: white;
-            transition: all 0.3s ease-in-out;
-            z-index: 50;
-            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
-        }
-
-        .sidebar.open {
-            left: 0;
-        }
-
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease-in-out;
-            z-index: 40;
-        }
-
-        .overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        /* Main content styles */
-        .main-content {
-            position: relative;
-            min-height: 100vh;
-        }
-
-        .main-content.shifted {
-            margin-left: 320px;
-        }
+      .main-content.shifted {
+        margin-left: 320px;
+      }
     </style>
-</head>
+  </head>
 
-<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+  <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
     <!-- Sidebar Overlay -->
     <div id="overlay" class="overlay"></div>
 
     <!-- Sidebar -->
     <div id="sidebar" class="sidebar p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-gray-800">Ayarlar</h2>
-            <button id="closeSidebar" class="text-gray-500 hover:text-gray-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-gray-800">Ayarlar</h2>
+        <button id="closeSidebar" class="text-gray-500 hover:text-gray-700">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >JIRA Base URL</label
+          >
+          <input
+            type="text"
+            id="jiraBaseUrl"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+            placeholder="https://your-domain.atlassian.net"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Email</label
+          >
+          <input
+            type="email"
+            id="email"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+            placeholder="your.email@example.com"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >API Token</label
+          >
+          <input
+            type="password"
+            id="apiToken"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+            placeholder="Your Jira API Token"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Project Key</label
+          >
+          <input
+            type="text"
+            id="projectKey"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+            placeholder="e.g., S1"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Task Status</label
+          >
+          <select
+            id="taskStatus"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+          >
+            <option value="Selected for Development">
+              Selected for Development
+            </option>
+            <option value="To Do">To Do</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Hariç Tutulacak E-postalar</label
+          >
+          <textarea
+            id="excludedEmails"
+            rows="4"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+            placeholder="Her satıra bir e-posta giriniz:&#10;user1@example.com&#10;user2@example.com"
+          ></textarea>
+          <p class="text-sm text-gray-500 mt-1">
+            Her e-postayı yeni bir satıra yazınız
+          </p>
         </div>
 
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">JIRA Base URL</label>
-                <input type="text" id="jiraBaseUrl"
-                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
-                    placeholder="https://your-domain.atlassian.net">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" id="email" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
-                    placeholder="your.email@example.com">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">API Token</label>
-                <input type="password" id="apiToken"
-                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
-                    placeholder="Your Jira API Token">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Project Key</label>
-                <input type="text" id="projectKey" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
-                    placeholder="e.g., S1">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Task Status</label>
-                <select id="taskStatus" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring">
-                    <option value="Selected for Development">Selected for Development</option>
-                    <option value="To Do">To Do</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Hariç Tutulacak E-postalar</label>
-                <textarea id="excludedEmails" rows="4"
-                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
-                    placeholder="Her satıra bir e-posta giriniz:&#10;user1@example.com&#10;user2@example.com"></textarea>
-                <p class="text-sm text-gray-500 mt-1">Her e-postayı yeni bir satıra yazınız</p>
-            </div>
-
-            <!-- Test Mode Switch -->
-            <div class="mt-4 flex items-center justify-between">
-                <span class="text-sm font-medium text-gray-700">Test Modu</span>
-                <label class="switch">
-                    <input type="checkbox" id="testMode">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Performance Hesaplama Türü</label>
-                <select id="performanceType"
-                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring" required>
-                    <option value="done">Done Puanlar</option>
-                    <option value="all">Tüm Puanlar</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2 flex flex-col">
-                    PROJECT_KEY Filtresi Olmadan Hesaplanacak Kullanıcılar
-                    <span class="text-xs text-gray-500">(Her satıra bir e-posta)</span>
-                </label>
-                <textarea
-                    id="excludedFromProjectKeyFilter"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    rows="4"
-                    placeholder="ornek@email.com"></textarea>
-            </div>
+        <!-- Test Mode Switch -->
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-sm font-medium text-gray-700">Test Modu</span>
+          <label class="switch">
+            <input type="checkbox" id="testMode" />
+            <span class="slider"></span>
+          </label>
         </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Performance Hesaplama Türü</label
+          >
+          <select
+            id="performanceType"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+            required
+          >
+            <option value="done">Done Puanlar</option>
+            <option value="all">Tüm Puanlar</option>
+          </select>
+        </div>
+
+        <div>
+          <label
+            class="block text-sm font-medium text-gray-700 mb-2 flex flex-col"
+          >
+            PROJECT_KEY Filtresi Olmadan Hesaplanacak Kullanıcılar
+            <span class="text-xs text-gray-500">(Her satıra bir e-posta)</span>
+          </label>
+          <textarea
+            id="excludedFromProjectKeyFilter"
+            class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            rows="4"
+            placeholder="ornek@email.com"
+          ></textarea>
+        </div>
+      </div>
     </div>
 
     <!-- Main Content -->
     <div id="mainContent" class="main-content">
-        <div class="container mx-auto px-4 py-8 max-w-7xl">
-            <!-- Header -->
-            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-                <div class="flex items-center justify-between">
-                    <button id="openSidebar" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                    <h1 class="text-2xl font-bold text-gray-800">Jira Yardımcısı</h1>
-                    <div class="w-6"></div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Left Column: Control Panels -->
-                <div class="lg:col-span-1 space-y-8">
-                    <!-- Task Assignment Panel -->
-                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-semibold text-gray-800">Task Management</h3>
-                            <div class="flex space-x-2">
-                                <button id="editTargetPoints" class="text-blue-600 hover:text-blue-700 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                    </svg>
-                                </button>
-                                <button id="refreshTaskAssignment" class="text-blue-600 hover:text-blue-700 transition-transform duration-500">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="space-y-4">
-                            <!-- Task ID Selectbox -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Task ID</label>
-                                <select id="taskToAssign"
-                                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring" required>
-                                    <option value="">Task Seç</option>
-                                    <option value="manual">Manuel Task Gir</option>
-                                </select>
-                            </div>
-
-                            <!-- Manuel Task Input -->
-                            <div id="manualTaskContainer" class="hidden mt-2">
-                                <input type="text" id="manualTaskInput"
-                                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
-                                    placeholder="Task ID'sini girin (örn: S1-123)">
-                            </div>
-
-                            <!-- Comment alanı -->
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Yorum</label>
-                                <textarea id="taskComment" rows="3"
-                                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
-                                    placeholder="Task ile ilgili bir yorum ekleyin..."></textarea>
-                            </div>
-
-                            <!-- Task Status Checkbox -->
-                            <div class="mt-4 flex items-center">
-                                <input type="checkbox" id="moveToSelectedForDev"
-                                    class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
-                                <label for="moveToSelectedForDev" class="ml-2 block text-sm text-gray-700">
-                                    Task'ı "SFD" durumuna taşı
-                                </label>
-                            </div>
-
-                            <!-- Assignment Type -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Task Atama Yöntemi</label>
-                                <select id="assignmentType"
-                                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring" required>
-                                    <option value="lowest_done">Done Puanı En Düşük</option>
-                                    <option value="lowest_total">Toplam Puanı En Düşük</option>
-                                    <option value="random">Rastgele</option>
-                                    <option value="specific">Kişiye Özel</option>
-                                    <option value="under_80">%80 Performans Altı</option>
-                                </select>
-                            </div>
-
-                            <!-- Developer Selectbox -->
-                            <div id="userSelectContainer" class="hidden">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Developer</label>
-                                <select id="assigneeUser"
-                                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring">
-                                    <option value="">Developer Seç</option>
-                                </select>
-                            </div>
-
-                            <!-- Assignment Button -->
-                            <button id="assignTask"
-                                class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                                İşlemi Başlat
-                            </button>
-
-                            <!-- Selim'e Ata Butonu -->
-                            <button id="assignToSelim"
-                                class="w-full mt-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white py-2 px-4 rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all transform hover:scale-105 flex items-center justify-center space-x-2">
-                                <span>Taskı Selim'e Ata</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Statistics and Logs -->
-                <div class="lg:col-span-2 space-y-8">
-                    <!-- Logs Panel -->
-                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">İşlem Logları</h3>
-                        <div id="logs"
-                            class="font-mono text-xs text-gray-700 h-[300px] overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200 break-all">
-                        </div>
-                        
-                        <!-- Leaderboard Section -->
-                        <div class="p-4 bg-white border-t border-gray-200">
-                            <div class="max-w-4xl mx-auto">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h2 class="text-2xl font-bold text-gray-800">🏆 Developer Leaderboard</h2>
-                                    <div class="flex items-center space-x-2">
-                                        <span class="text-sm text-gray-600">Order By:</span>
-                                        <select id="leaderboardOrder" class="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="done">Done Points</option>
-                                            <option value="all">All Points</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div id="leaderboard" class="space-y-4">
-                                    <!-- Dinamik olarak doldurulacak -->
-                                </div>
-                            </div>
-                        </div>
-                        <!-- End Leaderboard Section -->
-                    </div>
-                </div>
-            </div>
+      <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div class="flex items-center justify-between">
+            <button
+              id="openSidebar"
+              class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-gray-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+            <h1 class="text-2xl font-bold text-gray-800">Jira Yardımcısı</h1>
+            <div class="w-6"></div>
+          </div>
         </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <!-- Left Column: Control Panels -->
+          <div class="lg:col-span-1 space-y-8">
+            <!-- Task Assignment Panel -->
+            <div
+              class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8"
+            >
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">
+                  Task Management
+                </h3>
+                <div class="flex space-x-2">
+                  <button
+                    id="editTargetPoints"
+                    class="text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    id="refreshTaskAssignment"
+                    class="text-blue-600 hover:text-blue-700 transition-transform duration-500"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="space-y-4">
+                <!-- Task ID Selectbox -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Task ID</label
+                  >
+                  <select
+                    id="taskToAssign"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+                    required
+                  >
+                    <option value="">Task Seç</option>
+                    <option value="manual">Manuel Task Gir</option>
+                  </select>
+                </div>
+
+                <!-- Manuel Task Input -->
+                <div id="manualTaskContainer" class="hidden mt-2">
+                  <input
+                    type="text"
+                    id="manualTaskInput"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+                    placeholder="Task ID'sini girin (örn: S1-123)"
+                  />
+                </div>
+
+                <!-- Comment alanı -->
+                <div class="mt-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Yorum</label
+                  >
+                  <textarea
+                    id="taskComment"
+                    rows="3"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+                    placeholder="Task ile ilgili bir yorum ekleyin..."
+                  ></textarea>
+                </div>
+
+                <!-- Task Status Checkbox -->
+                <div class="mt-4 flex items-center">
+                  <input
+                    type="checkbox"
+                    id="moveToSelectedForDev"
+                    class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                  <label
+                    for="moveToSelectedForDev"
+                    class="ml-2 block text-sm text-gray-700"
+                  >
+                    Task'ı "SFD" durumuna taşı
+                  </label>
+                </div>
+
+                <!-- Assignment Type -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Task Atama Yöntemi</label
+                  >
+                  <select
+                    id="assignmentType"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+                    required
+                  >
+                    <option value="lowest_done">Done Puanı En Düşük</option>
+                    <option value="lowest_total">Toplam Puanı En Düşük</option>
+                    <option value="random">Rastgele</option>
+                    <option value="specific">Kişiye Özel</option>
+                    <option value="under_80">%80 Performans Altı</option>
+                  </select>
+                </div>
+
+                <!-- Developer Selectbox -->
+                <div id="userSelectContainer" class="hidden">
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Developer</label
+                  >
+                  <select
+                    id="assigneeUser"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+                  >
+                    <option value="">Developer Seç</option>
+                  </select>
+                </div>
+
+                <!-- Assignment Button -->
+                <button
+                  id="assignTask"
+                  class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  İşlemi Başlat
+                </button>
+
+                <!-- Selim'e Ata Butonu -->
+                <button
+                  id="assignToSelim"
+                  class="w-full mt-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white py-2 px-4 rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
+                >
+                  <span>Taskı Selim'e Ata</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Statistics and Logs -->
+          <div class="lg:col-span-2 space-y-8">
+            <!-- Logs Panel -->
+            <div
+              class="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
+            >
+              <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                İşlem Logları
+              </h3>
+              <div
+                id="logs"
+                class="font-mono text-xs text-gray-700 h-[300px] overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200 break-all"
+              ></div>
+            </div>
+            <!-- Leaderboard Section -->
+            <div
+              class="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
+            >
+              <div class="max-w-4xl mx-auto">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                    Developer Leaderboard
+                  </h2>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-600">Order By:</span>
+                    <select
+                      id="leaderboardOrder"
+                      class="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="done">Done Points</option>
+                      <option value="all">All Points</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="leaderboard" class="space-y-4">
+                  <!-- Dinamik olarak doldurulacak -->
+                </div>
+              </div>
+            </div>
+            <!-- End Leaderboard Section -->
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Target Points Modal -->
-    <div id="targetPointsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
-        <div class="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full mx-4">
-            <h2 class="text-xl font-bold mb-6">Hedef Puan Belirleme</h2>
-            <div id="targetPointsContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2">
-                <!-- Dinamik olarak doldurulacak -->
-            </div>
-            <div class="mt-6 flex justify-end space-x-4 pt-4 border-t">
-                <button id="saveTargetPoints" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">
-                    Kaydet
-                </button>
-                <button id="closeTargetPointsModal" class="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition-colors">
-                    Kapat
-                </button>
-            </div>
+    <div
+      id="targetPointsModal"
+      class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full mx-4">
+        <h2 class="text-xl font-bold mb-6">Hedef Puan Belirleme</h2>
+        <div
+          id="targetPointsContent"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2"
+        >
+          <!-- Dinamik olarak doldurulacak -->
         </div>
+        <div class="mt-6 flex justify-end space-x-4 pt-4 border-t">
+          <button
+            id="saveTargetPoints"
+            class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+          >
+            Kaydet
+          </button>
+          <button
+            id="closeTargetPointsModal"
+            class="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition-colors"
+          >
+            Kapat
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Selim Modal -->
-    <div id="selimModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4 text-center">
-            <h2 class="text-2xl font-bold mb-4">Düşünmen Yeter! 🤔</h2>
-            <img src="assets/eyvallah.jpeg" alt="Eyvallah" class="w-full h-auto rounded-lg mb-4">
-            <button id="closeSelimModal" class="text-black border border-black px-6 py-2 rounded hover:bg-black hover:text-white transition-colors">
-                Eyvallah
-            </button>
-        </div>
+    <div
+      id="selimModal"
+      class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50"
+    >
+      <div
+        class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4 text-center"
+      >
+        <h2 class="text-2xl font-bold mb-4">Düşünmen Yeter! 🤔</h2>
+        <img
+          src="assets/eyvallah.jpeg"
+          alt="Eyvallah"
+          class="w-full h-auto rounded-lg mb-4"
+        />
+        <button
+          id="closeSelimModal"
+          class="text-black border border-black px-6 py-2 rounded hover:bg-black hover:text-white transition-colors"
+        >
+          Eyvallah
+        </button>
+      </div>
     </div>
 
     <script src="./script/index.js"></script>
-</body>
-
+  </body>
 </html>

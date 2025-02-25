@@ -101,7 +101,9 @@ async function getProjectUsers() {
 
     // Tüm taskları tek seferde çek
     const tasksResponse = await axios.get(
-      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}&maxResults=100&fields=assignee`,
+      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(
+        jqlQuery
+      )}&maxResults=100&fields=assignee`,
       {
         auth: { username: EMAIL, password: API_TOKEN },
       }
@@ -117,7 +119,7 @@ async function getProjectUsers() {
             accountId: user.accountId,
             displayName: user.displayName,
             emailAddress: user.emailAddress,
-            active: user.active
+            active: user.active,
           });
         }
       }
@@ -125,18 +127,19 @@ async function getProjectUsers() {
 
     // Filtrele ve paralel olarak in-progress durumlarını kontrol et
     const userPromises = Array.from(uniqueUsers.values())
-      .filter(user => 
-        user.active &&
-        !user.displayName.includes("addon") &&
-        !user.displayName.toLowerCase().includes("bot") &&
-        !user.displayName.toLowerCase().includes("system") &&
-        !excludedEmailList.includes(user.emailAddress.toLowerCase())
+      .filter(
+        (user) =>
+          user.active &&
+          !user.displayName.includes("addon") &&
+          !user.displayName.toLowerCase().includes("bot") &&
+          !user.displayName.toLowerCase().includes("system") &&
+          !excludedEmailList.includes(user.emailAddress.toLowerCase())
       )
       .map(async (user) => {
         const hasInProgress = await hasInProgressTasks(user.accountId);
         return {
           ...user,
-          hasInProgressTasks: hasInProgress
+          hasInProgressTasks: hasInProgress,
         };
       });
 
@@ -160,7 +163,7 @@ async function getUserAllTasks(accountId) {
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
   // Kullanıcının e-posta adresini al
-  let userEmail = '';
+  let userEmail = "";
   try {
     const userResponse = await axios.get(
       `${JIRA_BASE_URL}/rest/api/3/user?accountId=${accountId}`,
@@ -174,25 +177,28 @@ async function getUserAllTasks(accountId) {
   }
 
   // PROJECT_KEY filtresi olmadan hesaplanacak kullanıcıları al
-  const excludedEmails = global.mainWindow ? 
-    await global.mainWindow.webContents.executeJavaScript(
-      `localStorage.getItem('EXCLUDED_FROM_PROJECT_KEY_FILTER')`,
-      true
-    ) : '';
-  
+  const excludedEmails = global.mainWindow
+    ? await global.mainWindow.webContents.executeJavaScript(
+        `localStorage.getItem('EXCLUDED_FROM_PROJECT_KEY_FILTER')`,
+        true
+      )
+    : "";
+
   const excludedEmailList = excludedEmails
-    ? excludedEmails.split(/[\n\r]+/).map(email => email.trim().toLowerCase())
+    ? excludedEmails.split(/[\n\r]+/).map((email) => email.trim().toLowerCase())
     : [];
 
   // JQL sorgusunu oluştur
-  let jqlQuery = '';
+  let jqlQuery = "";
   if (excludedEmailList.includes(userEmail)) {
     // PROJECT_KEY filtresi olmadan
     jqlQuery = `assignee = ${accountId}
       AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
       AND updated <= "${lastDayOfMonth.toISOString().split("T")[0]}" 
       ORDER BY updated DESC`;
-    logger.info(`${userEmail} için PROJECT_KEY filtresi olmadan puanlar hesaplanıyor...`);
+    logger.info(
+      `${userEmail} için PROJECT_KEY filtresi olmadan puanlar hesaplanıyor...`
+    );
   } else {
     // Normal sorgu (PROJECT_KEY filtresi ile)
     jqlQuery = `project = "${PROJECT_KEY}" 
@@ -300,12 +306,12 @@ async function addCommentToTask(taskKey, comment) {
               content: [
                 {
                   type: "text",
-                  text: comment
-                }
-              ]
-            }
-          ]
-        }
+                  text: comment,
+                },
+              ],
+            },
+          ],
+        },
       },
       {
         auth: { username: EMAIL, password: API_TOKEN },
@@ -328,8 +334,8 @@ async function updateTaskStatus(taskKey, status) {
       `${JIRA_BASE_URL}/rest/api/3/issue/${taskKey}/transitions`,
       {
         transition: {
-          id: status === "Selected for Development" ? "3" : "4" // 3: Selected for Development, 4: In Progress
-        }
+          id: status === "Selected for Development" ? "3" : "4", // 3: Selected for Development, 4: In Progress
+        },
       },
       {
         auth: { username: EMAIL, password: API_TOKEN },
@@ -346,27 +352,34 @@ async function updateTaskStatus(taskKey, status) {
   }
 }
 
-async function assignTaskToUser(taskKey, selectedUserId, comment, moveToSelectedForDev, assignmentType) {
+async function assignTaskToUser(
+  taskKey,
+  selectedUserId,
+  comment,
+  moveToSelectedForDev,
+  assignmentType
+) {
   try {
     // Eğer under_80 seçeneği seçilmişse
     if (assignmentType === "under_80") {
       // Düşük performanslı Developerları al
       const lowPerformers = await new Promise((resolve) => {
         if (global.mainWindow) {
-          global.mainWindow.webContents.executeJavaScript(
-            `localStorage.getItem('lowPerformers')`,
-            true
-          ).then(result => {
-            resolve(JSON.parse(result || '[]'));
-          });
+          global.mainWindow.webContents
+            .executeJavaScript(`localStorage.getItem('lowPerformers')`, true)
+            .then((result) => {
+              resolve(JSON.parse(result || "[]"));
+            });
         } else {
           resolve([]);
         }
       });
-      
+
       // In progress'te işi olmayan düşük performanslı Developeryı bul
-      const availableLowPerformer = lowPerformers.find(user => !user.hasInProgressTasks);
-      
+      const availableLowPerformer = lowPerformers.find(
+        (user) => !user.hasInProgressTasks
+      );
+
       if (availableLowPerformer) {
         selectedUserId = availableLowPerformer.accountId;
       } else {
@@ -374,7 +387,8 @@ async function assignTaskToUser(taskKey, selectedUserId, comment, moveToSelected
         await updateTaskStatus(taskKey, "Selected for Development");
         return {
           success: false,
-          message: "Uygun düşük performanslı Developer bulunamadı. Task 'Selected for Development' durumuna taşındı."
+          message:
+            "Uygun düşük performanslı Developer bulunamadı. Task 'Selected for Development' durumuna taşındı.",
         };
       }
     }
@@ -413,7 +427,9 @@ async function assignTaskToUser(taskKey, selectedUserId, comment, moveToSelected
       await updateTaskStatus(taskKey, "Selected for Development");
     }
 
-    logger.info(`Task ${taskKey} başarıyla ${selectedUserId} Developersına atandı.`);
+    logger.info(
+      `Task ${taskKey} başarıyla ${selectedUserId} Developersına atandı.`
+    );
     return {
       success: true,
     };
@@ -486,35 +502,55 @@ async function calculateUserPoints(users, performanceType = "done") {
     // Ay içindeki iş günü hesaplama
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    
+    const lastDayOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0
+    );
+
     // İş günü hesaplamalarını tek seferde yap
-    const { workDaysUntilToday, totalWorkDays } = calculateWorkDays(firstDayOfMonth, lastDayOfMonth, today);
-    
+    const { workDaysUntilToday, totalWorkDays } = calculateWorkDays(
+      firstDayOfMonth,
+      lastDayOfMonth,
+      today
+    );
+
     // Beklenen tamamlanma oranı (iş günü bazlı)
     const expectedCompletionRatio = (workDaysUntilToday / totalWorkDays) * 100;
 
     logger.info("=== Developer Puanları Hesaplanıyor ===");
-    logger.info(`Hesaplama Tipi: ${performanceType === "done" ? "Done Points" : "All Points"}`);
+    logger.info(
+      `Hesaplama Tipi: ${
+        performanceType === "done" ? "Done Points" : "All Points"
+      }`
+    );
     logger.info(`Ay içindeki toplam iş günü: ${totalWorkDays}`);
     logger.info(`Bugüne kadar geçen iş günü: ${workDaysUntilToday}`);
-    logger.info(`Beklenen tamamlanma oranı: ${expectedCompletionRatio.toFixed(1)}%\n`);
+    logger.info(
+      `Beklenen tamamlanma oranı: ${expectedCompletionRatio.toFixed(1)}%\n`
+    );
 
     // Tüm hedef puanları tek seferde al
     const targetPointsMap = await getTargetPointsForUsers(users);
 
     // Tüm kullanıcıların task'larını paralel olarak çek
-    const userDataPromises = users.map(async user => {
+    const userDataPromises = users.map(async (user) => {
       const tasks = await getUserAllTasks(user.accountId);
       const { donePoints, totalPoints } = calculatePoints(tasks);
-      
+
       const targetPoints = targetPointsMap.get(user.emailAddress) || 0;
-      const calculatedPoints = performanceType === "done" ? donePoints : totalPoints;
-      
+      const calculatedPoints =
+        performanceType === "done" ? donePoints : totalPoints;
+
       // Oranları hesapla
-      const completionRatio = targetPoints > 0 ? (calculatedPoints / targetPoints) * 100 : 0;
-      const currentTargetPoints = (targetPoints * workDaysUntilToday) / totalWorkDays;
-      const currentCompletionRatio = currentTargetPoints > 0 ? (calculatedPoints / currentTargetPoints) * 100 : 0;
+      const completionRatio =
+        targetPoints > 0 ? (calculatedPoints / targetPoints) * 100 : 0;
+      const currentTargetPoints =
+        (targetPoints * workDaysUntilToday) / totalWorkDays;
+      const currentCompletionRatio =
+        currentTargetPoints > 0
+          ? (calculatedPoints / currentTargetPoints) * 100
+          : 0;
 
       return {
         ...user,
@@ -524,7 +560,7 @@ async function calculateUserPoints(users, performanceType = "done") {
         currentTargetPoints,
         completionRatio,
         currentCompletionRatio,
-        calculatedPoints
+        calculatedPoints,
       };
     });
 
@@ -532,35 +568,49 @@ async function calculateUserPoints(users, performanceType = "done") {
     userPointsData = await Promise.all(userDataPromises);
 
     // Kullanıcı verilerini logla ve düşük performanslıları belirle
-    userPointsData.forEach(userData => {
+    userPointsData.forEach((userData) => {
       logUserStats(userData, workDaysUntilToday, totalWorkDays);
-      
+
       if (userData.currentCompletionRatio < 80) {
         lowPerformers.push(userData);
-        logger.warn(`  ⚠️ Düşük performans! (${userData.currentCompletionRatio.toFixed(1)}% < 80%)`);
+        logger.warn(
+          `  ⚠️ Düşük performans! (${userData.currentCompletionRatio.toFixed(
+            1
+          )}% < 80%)`
+        );
       }
     });
 
     // Düşük performanslı Developerları kaydet
     if (global.mainWindow) {
       await global.mainWindow.webContents.executeJavaScript(
-        `localStorage.setItem('lowPerformers', '${JSON.stringify(lowPerformers)}')`,
+        `localStorage.setItem('lowPerformers', '${JSON.stringify(
+          lowPerformers
+        )}')`,
         true
       );
     }
 
     // Özet logları
-    logSummary(users.length, lowPerformers, performanceType, workDaysUntilToday, totalWorkDays);
+    logSummary(
+      users.length,
+      lowPerformers,
+      performanceType,
+      workDaysUntilToday,
+      totalWorkDays
+    );
 
     return {
       userPointsData,
-      lowPerformers
+      lowPerformers,
     };
   } catch (error) {
-    logger.error(`Developer puanları hesaplanırken hata oluştu: ${error.message}`);
+    logger.error(
+      `Developer puanları hesaplanırken hata oluştu: ${error.message}`
+    );
     return {
       userPointsData: [],
-      lowPerformers: []
+      lowPerformers: [],
     };
   }
 }
@@ -569,7 +619,11 @@ async function calculateUserPoints(users, performanceType = "done") {
 function calculateWorkDays(firstDayOfMonth, lastDayOfMonth, today) {
   let workDaysUntilToday = 0;
   let totalWorkDays = 0;
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
 
   // Ay başından bugüne kadar olan iş günlerini say
   let currentDay = new Date(firstDayOfMonth);
@@ -596,9 +650,9 @@ function calculateWorkDays(firstDayOfMonth, lastDayOfMonth, today) {
 
 async function getTargetPointsForUsers(users) {
   const targetPointsMap = new Map();
-  
+
   if (global.mainWindow) {
-    const promises = users.map(async user => {
+    const promises = users.map(async (user) => {
       const value = await global.mainWindow.webContents.executeJavaScript(
         `localStorage.getItem("targetPoints-${user.emailAddress}")`,
         true
@@ -607,59 +661,84 @@ async function getTargetPointsForUsers(users) {
         targetPointsMap.set(user.emailAddress, parseInt(value));
       }
     });
-    
+
     await Promise.all(promises);
   }
-  
+
   return targetPointsMap;
 }
 
 function calculatePoints(tasks) {
-  return tasks.reduce((acc, task) => {
-    const points = task.fields.customfield_10028 || 0;
-    const status = task.fields.status.name;
-    
-    if (status === "Done") {
-      acc.donePoints += points;
-    }
-    
-    if (status !== "Track") {
-      acc.totalPoints += points;
-    }
-    
-    return acc;
-  }, { donePoints: 0, totalPoints: 0 });
+  return tasks.reduce(
+    (acc, task) => {
+      const points = task.fields.customfield_10028 || 0;
+      const status = task.fields.status.name;
+
+      if (status === "Done") {
+        acc.donePoints += points;
+      }
+
+      if (status !== "Track") {
+        acc.totalPoints += points;
+      }
+
+      return acc;
+    },
+    { donePoints: 0, totalPoints: 0 }
+  );
 }
 
 function logUserStats(userData, workDaysUntilToday, totalWorkDays) {
-  const currentTargetPoints = (userData.targetPoints * workDaysUntilToday) / totalWorkDays;
+  const currentTargetPoints =
+    (userData.targetPoints * workDaysUntilToday) / totalWorkDays;
   logger.info(`${userData.displayName}:`);
   logger.info(`  ├─ Done Points: ${userData.donePoints}`);
   logger.info(`  ├─ Total Points: ${userData.totalPoints}`);
   logger.info(`  ├─ Target Points: ${userData.targetPoints}`);
   logger.info(`  ├─ Current Target Points: ${currentTargetPoints.toFixed(1)}`);
-  logger.info(`  ├─ Overall Completion: ${userData.completionRatio.toFixed(1)}%`);
-  logger.info(`  └─ Current Completion: ${userData.currentCompletionRatio.toFixed(1)}%`);
+  logger.info(
+    `  ├─ Overall Completion: ${userData.completionRatio.toFixed(1)}%`
+  );
+  logger.info(
+    `  └─ Current Completion: ${userData.currentCompletionRatio.toFixed(1)}%`
+  );
 }
 
-function logSummary(totalUsers, lowPerformers, performanceType, workDaysUntilToday, totalWorkDays) {
+function logSummary(
+  totalUsers,
+  lowPerformers,
+  performanceType,
+  workDaysUntilToday,
+  totalWorkDays
+) {
   logger.info("\n=== Özet ===");
   logger.info(`Toplam Developer: ${totalUsers}`);
   logger.info(`Düşük Performanslı Developer: ${lowPerformers.length}`);
-  
+
   if (lowPerformers.length > 0) {
     logger.info("\n=== Düşük Performanslı Developerlar ===");
-    lowPerformers.forEach(user => {
-      const currentTargetPoints = (user.targetPoints * workDaysUntilToday) / totalWorkDays;
+    lowPerformers.forEach((user) => {
+      const currentTargetPoints =
+        (user.targetPoints * workDaysUntilToday) / totalWorkDays;
       logger.info(`${user.displayName}:`);
-      logger.info(`  ├─ ${performanceType === "done" ? "Done" : "Total"} Points: ${user.calculatedPoints}`);
+      logger.info(
+        `  ├─ ${performanceType === "done" ? "Done" : "Total"} Points: ${
+          user.calculatedPoints
+        }`
+      );
       logger.info(`  ├─ Güncel Hedef: ${currentTargetPoints.toFixed(1)}`);
       logger.info(`  ├─ Aylık Hedef: ${user.targetPoints}`);
-      logger.info(`  └─ Performans: ${user.currentCompletionRatio.toFixed(1)}%`);
-      logger.info(`  └─ Durum: ${user.hasInProgressTasks ? '🔄 In Progress Taskı Var' : '✅ Müsait'}`);
+      logger.info(
+        `  └─ Performans: ${user.currentCompletionRatio.toFixed(1)}%`
+      );
+      logger.info(
+        `  └─ Durum: ${
+          user.hasInProgressTasks ? "🔄 In Progress Taskı Var" : "✅ Müsait"
+        }`
+      );
     });
   }
-  
+
   logger.info("=== Hesaplama Tamamlandı ===\n");
 }
 
@@ -686,8 +765,19 @@ ipcMain.on("get-unassigned-tasks", async (event) => {
 
 ipcMain.on("assign-task", async (event, data) => {
   try {
-    const { taskKey, selectedUserId, cachedUsers, cachedTasks, comment, moveToSelectedForDev, isTestMode, assignmentType } = data;
-    const selectedUser = cachedUsers.find(user => user.accountId === selectedUserId);
+    const {
+      taskKey,
+      selectedUserId,
+      cachedUsers,
+      cachedTasks,
+      comment,
+      moveToSelectedForDev,
+      isTestMode,
+      assignmentType,
+    } = data;
+    const selectedUser = cachedUsers.find(
+      (user) => user.accountId === selectedUserId
+    );
 
     if (!selectedUser) {
       logger.error("Developer bulunamadı!");
@@ -700,13 +790,17 @@ ipcMain.on("assign-task", async (event, data) => {
       // Test modunda gerçek atama yapmadan simülasyon yap
       logger.info("=== TEST MODU ===");
       logger.info(`Task ${taskKey} için simülasyon yapılıyor...`);
-      logger.info(`Seçilen Developer: ${selectedUser.displayName} (${selectedUser.accountId})`);
-      
+      logger.info(
+        `Seçilen Developer: ${selectedUser.displayName} (${selectedUser.accountId})`
+      );
+
       // Aktif task kontrolü simülasyonu
       const activeTaskCheck = await hasActiveTask(selectedUser.accountId);
       if (activeTaskCheck.hasActive) {
         const taskList = activeTaskCheck.tasks.join("\n");
-        logger.warn(`[TEST] Developernın üzerinde aktif task'lar var:\n${taskList}`);
+        logger.warn(
+          `[TEST] Developernın üzerinde aktif task'lar var:\n${taskList}`
+        );
         result = {
           success: false,
           error: "Developernın üzerinde aktif task'lar var",
@@ -714,24 +808,34 @@ ipcMain.on("assign-task", async (event, data) => {
         };
       } else {
         // Başarılı atama simülasyonu
-        logger.info(`[TEST] Task ${taskKey} başarıyla ${selectedUser.displayName} Developersına atanacaktı`);
+        logger.info(
+          `[TEST] Task ${taskKey} başarıyla ${selectedUser.displayName} Developersına atanacaktı`
+        );
         if (comment) {
           logger.info(`[TEST] Task'a eklenecek yorum: "${comment}"`);
         }
         if (moveToSelectedForDev) {
-          logger.info(`[TEST] Task durumu "Selected for Development" olarak güncellenecekti`);
+          logger.info(
+            `[TEST] Task durumu "Selected for Development" olarak güncellenecekti`
+          );
         }
         result = { success: true };
       }
       logger.info("=== TEST MODU ===");
     } else {
       // Gerçek atama işlemi
-      result = await assignTaskToUser(taskKey, selectedUser.accountId, comment, moveToSelectedForDev, assignmentType);
+      result = await assignTaskToUser(
+        taskKey,
+        selectedUser.accountId,
+        comment,
+        moveToSelectedForDev,
+        assignmentType
+      );
     }
-    
+
     if (result.success) {
       // Başarılı atama sonrası cached listeleri güncelle
-      const taskIndex = cachedTasks.findIndex(task => task.key === taskKey);
+      const taskIndex = cachedTasks.findIndex((task) => task.key === taskKey);
       if (taskIndex !== -1) {
         cachedTasks.splice(taskIndex, 1);
       }
@@ -760,20 +864,25 @@ ipcMain.on("assign-task", async (event, data) => {
   }
 });
 
-ipcMain.on("calculate-user-points", async (event, { users, performanceType }) => {
-  try {
-    logger.info("Developer puanları hesaplanıyor...");
-    const userPoints = await calculateUserPoints(users, performanceType);
-    logger.info("Developer puanları hesaplandı.");
-    event.reply("user-points-calculated", userPoints);
-  } catch (error) {
-    logger.error(`Developer puanları hesaplanırken hata oluştu: ${error.message}`);
-    event.reply("user-points-calculated", {
-      userPointsData: [],
-      lowPerformers: []
-    });
+ipcMain.on(
+  "calculate-user-points",
+  async (event, { users, performanceType }) => {
+    try {
+      logger.info("Developer puanları hesaplanıyor...");
+      const userPoints = await calculateUserPoints(users, performanceType);
+      logger.info("Developer puanları hesaplandı.");
+      event.reply("user-points-calculated", userPoints);
+    } catch (error) {
+      logger.error(
+        `Developer puanları hesaplanırken hata oluştu: ${error.message}`
+      );
+      event.reply("user-points-calculated", {
+        userPointsData: [],
+        lowPerformers: [],
+      });
+    }
   }
-});
+);
 
 ipcMain.on("save-target-points", async (event, data) => {
   try {
@@ -787,7 +896,10 @@ ipcMain.on("save-target-points", async (event, data) => {
     event.reply("target-points-saved", { success: true });
   } catch (error) {
     logger.error(`Hedef puan kaydedilirken hata oluştu: ${error.message}`);
-    event.reply("target-points-saved", { success: false, error: error.message });
+    event.reply("target-points-saved", {
+      success: false,
+      error: error.message,
+    });
   }
 });
 

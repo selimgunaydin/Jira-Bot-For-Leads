@@ -105,7 +105,7 @@ let isCalculating = false;
 let userPointsCache = {
   lowest_done: null,
   lowest_total: null,
-  random: null
+  random: null,
 };
 let userPointsData = [];
 let lowPerformers = [];
@@ -113,9 +113,7 @@ let performanceType = localStorage.getItem("PERFORMANCE_TYPE_LEAD") || "done"; /
 
 // Buton durumunu kontrol et
 function checkButtonState() {
-  const shouldBeEnabled = isUsersLoaded && 
-    isTasksLoaded && 
-    !isCalculating;
+  const shouldBeEnabled = isUsersLoaded && isTasksLoaded && !isCalculating;
 
   assignTask.disabled = !shouldBeEnabled;
   assignTask.classList.toggle("opacity-50", !shouldBeEnabled);
@@ -164,29 +162,34 @@ function refreshTaskAssignmentArea() {
 refreshTaskAssignment.addEventListener("click", refreshTaskAssignmentArea);
 
 // Performans tipini değiştirme
-document.getElementById("performanceType").addEventListener("change", async (e) => {
+document
+  .getElementById("performanceType")
+  .addEventListener("change", async (e) => {
     performanceType = e.target.value;
     localStorage.setItem("PERFORMANCE_TYPE_LEAD", performanceType);
     await calculateUserPoints();
-});
+  });
 
 // Sayfa yüklendiğinde performans tipini seç
 document.getElementById("performanceType").value = performanceType;
 
 // PROJECT_KEY filtresi olmadan hesaplanacak kullanıcılar için localStorage işlemleri
-const excludedFromProjectKeyFilter = document.getElementById("excludedFromProjectKeyFilter");
-excludedFromProjectKeyFilter.value = localStorage.getItem('EXCLUDED_FROM_PROJECT_KEY_FILTER') || '';
-excludedFromProjectKeyFilter.addEventListener('change', (e) => {
-    localStorage.setItem('EXCLUDED_FROM_PROJECT_KEY_FILTER', e.target.value);
+const excludedFromProjectKeyFilter = document.getElementById(
+  "excludedFromProjectKeyFilter"
+);
+excludedFromProjectKeyFilter.value =
+  localStorage.getItem("EXCLUDED_FROM_PROJECT_KEY_FILTER") || "";
+excludedFromProjectKeyFilter.addEventListener("change", (e) => {
+  localStorage.setItem("EXCLUDED_FROM_PROJECT_KEY_FILTER", e.target.value);
 });
 
 // Developer puanlarını hesapla
 async function calculateUserPoints() {
   isCalculating = true;
   checkButtonState();
-  ipcRenderer.send("calculate-user-points", { 
+  ipcRenderer.send("calculate-user-points", {
     users: cachedUsers,
-    performanceType: performanceType 
+    performanceType: performanceType,
   });
 }
 
@@ -194,17 +197,20 @@ async function calculateUserPoints() {
 const targetPointsModal = document.getElementById("targetPointsModal");
 const targetPointsContent = document.getElementById("targetPointsContent");
 const saveTargetPoints = document.getElementById("saveTargetPoints");
-const closeTargetPointsModal = document.getElementById("closeTargetPointsModal");
+const closeTargetPointsModal = document.getElementById(
+  "closeTargetPointsModal"
+);
 const editTargetPoints = document.getElementById("editTargetPoints");
 
 // Modal işlemleri
 function showTargetPointsModal() {
-    targetPointsContent.innerHTML = '';
-    cachedUsers.forEach(user => {
-        const savedTarget = localStorage.getItem(`targetPoints-${user.emailAddress}`) || 0;
-        const userDiv = document.createElement('div');
-        userDiv.className = 'p-4 bg-gray-50 rounded-lg';
-        userDiv.innerHTML = `
+  targetPointsContent.innerHTML = "";
+  cachedUsers.forEach((user) => {
+    const savedTarget =
+      localStorage.getItem(`targetPoints-${user.emailAddress}`) || 0;
+    const userDiv = document.createElement("div");
+    userDiv.className = "p-4 bg-gray-50 rounded-lg";
+    userDiv.innerHTML = `
             <label class="block text-sm font-medium text-gray-700 mb-2">${user.displayName}</label>
             <div class="flex items-center space-x-2">
                 <input type="number" 
@@ -215,74 +221,78 @@ function showTargetPointsModal() {
                 <span class="text-sm text-gray-500 whitespace-nowrap">puan/ay</span>
             </div>
         `;
-        targetPointsContent.appendChild(userDiv);
-    });
-    targetPointsModal.classList.remove('hidden');
+    targetPointsContent.appendChild(userDiv);
+  });
+  targetPointsModal.classList.remove("hidden");
 }
 
-saveTargetPoints.addEventListener('click', async () => {
-    const inputs = targetPointsContent.querySelectorAll('input');
-    
-    for (const input of inputs) {
-        const email = input.dataset.email;
-        const value = parseInt(input.value) || 0;
-        localStorage.setItem(`targetPoints-${email}`, value);
-    }
+saveTargetPoints.addEventListener("click", async () => {
+  const inputs = targetPointsContent.querySelectorAll("input");
 
-    targetPointsModal.classList.add('hidden');
-    await calculateUserPoints();
+  for (const input of inputs) {
+    const email = input.dataset.email;
+    const value = parseInt(input.value) || 0;
+    localStorage.setItem(`targetPoints-${email}`, value);
+  }
+
+  targetPointsModal.classList.add("hidden");
+  await calculateUserPoints();
 });
 
-closeTargetPointsModal.addEventListener('click', () => {
-    targetPointsModal.classList.add('hidden');
+closeTargetPointsModal.addEventListener("click", () => {
+  targetPointsModal.classList.add("hidden");
 });
 
 // Hedef düzenleme butonu
-editTargetPoints.addEventListener('click', () => {
-    showTargetPointsModal();
+editTargetPoints.addEventListener("click", () => {
+  showTargetPointsModal();
 });
 
 // IPC Event Listeners
 ipcRenderer.on("project-users-data", async (event, users) => {
-    try {
-        cachedUsers = users;
-        
-        assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
-        let needsTargetPoints = false;
-        
-        users.forEach((user) => {
-            const option = document.createElement("option");
-            option.value = user.accountId;
-            const savedTarget = localStorage.getItem(`targetPoints-${user.emailAddress}`);
-            if (!savedTarget) {
-                needsTargetPoints = true;
-            }
-            option.textContent = `${user.displayName} ${
-                user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"
-            }`;
-            assigneeUser.appendChild(option);
-        });
+  try {
+    cachedUsers = users;
 
-        isUsersLoaded = true;
-        checkButtonState();
+    assigneeUser.innerHTML =
+      '<option value="">Select a user (optional)</option>';
+    let needsTargetPoints = false;
 
-        if (needsTargetPoints) {
-            showTargetPointsModal();
-        } else {
-            // Hedefler varsa hesaplamayı başlat
-            await calculateUserPoints();
-        }
-    } catch (error) {
-        console.error("Error updating user list:", error);
+    users.forEach((user) => {
+      const option = document.createElement("option");
+      option.value = user.accountId;
+      const savedTarget = localStorage.getItem(
+        `targetPoints-${user.emailAddress}`
+      );
+      if (!savedTarget) {
+        needsTargetPoints = true;
+      }
+      option.textContent = `${user.displayName} ${
+        user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"
+      }`;
+      assigneeUser.appendChild(option);
+    });
+
+    isUsersLoaded = true;
+    checkButtonState();
+
+    if (needsTargetPoints) {
+      showTargetPointsModal();
+    } else {
+      // Hedefler varsa hesaplamayı başlat
+      await calculateUserPoints();
     }
+  } catch (error) {
+    console.error("Error updating user list:", error);
+  }
 });
 
 ipcRenderer.on("unassigned-tasks-data", (event, tasks) => {
   try {
     // Cache tasks
     cachedTasks = tasks;
-    
-    taskToAssign.innerHTML = '<option value="">Select a task</option><option value="manual">Manuel Task Gir</option>';
+
+    taskToAssign.innerHTML =
+      '<option value="">Select a task</option><option value="manual">Manuel Task Gir</option>';
     tasks.forEach((task) => {
       const option = document.createElement("option");
       option.value = task.key;
@@ -303,76 +313,109 @@ leaderboardOrder.value = currentOrder;
 
 // Sıralama değiştiğinde
 leaderboardOrder.addEventListener("change", () => {
-    currentOrder = leaderboardOrder.value;
-    localStorage.setItem("LEADERBOARD_ORDER", currentOrder);
-    if (userPointsData.length > 0) {
-        updateLeaderboard(userPointsData, currentOrder);
-    }
+  currentOrder = leaderboardOrder.value;
+  localStorage.setItem("LEADERBOARD_ORDER", currentOrder);
+  if (userPointsData.length > 0) {
+    updateLeaderboard(userPointsData, currentOrder);
+  }
 });
 
 // Leaderboard güncelleme fonksiyonu
 function updateLeaderboard(userPointsData, orderBy = currentOrder) {
-    const leaderboard = document.getElementById("leaderboard");
-    
-    // Puanlara göre sırala
-    const sortedUsers = [...userPointsData].sort((a, b) => {
-        const pointsA = orderBy === "done" ? a.donePoints : a.totalPoints;
-        const pointsB = orderBy === "done" ? b.donePoints : b.totalPoints;
-        return pointsB - pointsA;
-    });
+  const leaderboard = document.getElementById("leaderboard");
 
-    // Leaderboard HTML'ini oluştur
-    leaderboard.innerHTML = sortedUsers.map((user, index) => {
-        const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
-        const rank = index + 1;
-        
-        // Done Points için renk ve stil
-        const doneProgressColor = user.currentCompletionRatio >= 100 ? "bg-green-500" : 
-                                user.currentCompletionRatio >= 80 ? "bg-blue-500" : "bg-red-500";
-        const doneTextColor = user.currentCompletionRatio >= 100 ? "text-green-600" : 
-                            user.currentCompletionRatio >= 80 ? "text-blue-600" : "text-red-600";
-        
-        // All Points için renk ve stil hesaplama
-        const allPointsRatio = (user.totalPoints / user.targetPoints) * 100;
-        const allProgressColor = allPointsRatio >= 100 ? "bg-green-500" : 
-                               allPointsRatio >= 80 ? "bg-blue-500" : "bg-red-500";
-        const allTextColor = allPointsRatio >= 100 ? "text-green-600" : 
-                           allPointsRatio >= 80 ? "text-blue-600" : "text-red-600";
+  // Puanlara göre sırala
+  const sortedUsers = [...userPointsData].sort((a, b) => {
+    const pointsA = orderBy === "done" ? a.donePoints : a.totalPoints;
+    const pointsB = orderBy === "done" ? b.donePoints : b.totalPoints;
+    return pointsB - pointsA;
+  });
 
-        // Seçili puana göre highlight
-        const doneHighlight = orderBy === "done" ? "font-semibold" : "font-medium";
-        const allHighlight = orderBy === "all" ? "font-semibold" : "font-medium";
+  // Leaderboard HTML'ini oluştur
+  leaderboard.innerHTML = sortedUsers
+    .map((user, index) => {
+      const medal =
+        index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
+      const rank = index + 1;
 
-        // Kart için stil
-        const isTopThree = index < 3;
-        const borderColor = isTopThree ? 
-            (index === 0 ? 'border-l-yellow-400' : index === 1 ? 'border-l-gray-400' : 'border-l-orange-400') :
-            'border-l-transparent';
-        
-        return `
+      // Done Points için renk ve stil
+      const doneProgressColor =
+        user.currentCompletionRatio >= 100
+          ? "bg-green-500"
+          : user.currentCompletionRatio >= 80
+          ? "bg-blue-500"
+          : "bg-red-500";
+      const doneTextColor =
+        user.currentCompletionRatio >= 100
+          ? "text-green-600"
+          : user.currentCompletionRatio >= 80
+          ? "text-blue-600"
+          : "text-red-600";
+
+      // All Points için renk ve stil hesaplama
+      const allPointsRatio = (user.totalPoints / user.targetPoints) * 100;
+      const allProgressColor =
+        allPointsRatio >= 100
+          ? "bg-green-500"
+          : allPointsRatio >= 80
+          ? "bg-blue-500"
+          : "bg-red-500";
+      const allTextColor =
+        allPointsRatio >= 100
+          ? "text-green-600"
+          : allPointsRatio >= 80
+          ? "text-blue-600"
+          : "text-red-600";
+
+      // Seçili puana göre highlight
+      const doneHighlight =
+        orderBy === "done" ? "font-semibold" : "font-medium";
+      const allHighlight = orderBy === "all" ? "font-semibold" : "font-medium";
+
+      // Kart için stil
+      const isTopThree = index < 3;
+      const borderColor = isTopThree
+        ? index === 0
+          ? "border-l-yellow-400"
+          : index === 1
+          ? "border-l-gray-400"
+          : "border-l-orange-400"
+        : "border-l-transparent";
+
+      return `
             <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 p-4 mb-3 border-l-4 ${borderColor}">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <!-- Sol Bölüm: Kullanıcı Bilgileri -->
                     <div class="flex items-center space-x-4">
                         <div class="flex-shrink-0 text-2xl">${medal}</div>
                         <div>
-                            <h3 class="font-semibold text-gray-800 text-lg">${user.displayName}</h3>
+                            <h3 class="font-semibold text-gray-800 text-lg">${
+                              user.displayName
+                            }</h3>
                             <div class="grid grid-cols-2 gap-x-6 gap-y-1 mt-2">
                                 <div class="flex items-center space-x-2">
                                     <span class="text-gray-500 text-sm">Done:</span>
-                                    <span class="font-medium text-gray-900 ${doneHighlight}">${user.donePoints}</span>
+                                    <span class="font-medium text-gray-900 ${doneHighlight}">${
+        user.donePoints
+      }</span>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <span class="text-gray-500 text-sm">Total:</span>
-                                    <span class="font-medium text-gray-900 ${allHighlight}">${user.totalPoints}</span>
+                                    <span class="font-medium text-gray-900 ${allHighlight}">${
+        user.totalPoints
+      }</span>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <span class="text-gray-500 text-sm">Güncel Hedef:</span>
-                                    <span class="font-medium text-gray-900">${user.currentTargetPoints}</span>
+                                    <span class="font-medium text-gray-900">${
+                                      user.currentTargetPoints
+                                    }</span>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <span class="text-gray-500 text-sm">Toplam Hedef:</span>
-                                    <span class="font-medium text-gray-900">${user.targetPoints}</span>
+                                    <span class="font-medium text-gray-900">${
+                                      user.targetPoints
+                                    }</span>
                                 </div>
                             </div>
                         </div>
@@ -381,13 +424,18 @@ function updateLeaderboard(userPointsData, orderBy = currentOrder) {
                     <!-- Sağ Bölüm: Performans Göstergeleri -->
                     <div class="flex items-center space-x-6">
                         <div class="flex flex-col space-y-4">
-                            ${orderBy === "done" ? `
+                            ${
+                              orderBy === "done"
+                                ? `
                             <!-- Done Performans -->
                             <div class="flex items-center space-x-3">
                                 <div class="w-32">
                                     <div class="w-full bg-gray-100 rounded-full h-2">
                                         <div class="${doneProgressColor} rounded-full h-2 transition-all duration-500" 
-                                             style="width: ${Math.min(user.currentCompletionRatio, 100)}%">
+                                             style="width: ${Math.min(
+                                               user.currentCompletionRatio,
+                                               100
+                                             )}%">
                                         </div>
                                     </div>
                                 </div>
@@ -395,13 +443,17 @@ function updateLeaderboard(userPointsData, orderBy = currentOrder) {
                                     ${user.currentCompletionRatio.toFixed(0)}%
                                 </span>
                             </div>
-                            ` : `
+                            `
+                                : `
                             <!-- Total Performans -->
                             <div class="flex items-center space-x-3">
                                 <div class="w-32">
                                     <div class="w-full bg-gray-100 rounded-full h-2">
                                         <div class="${allProgressColor} rounded-full h-2 transition-all duration-500" 
-                                             style="width: ${Math.min(allPointsRatio, 100)}%">
+                                             style="width: ${Math.min(
+                                               allPointsRatio,
+                                               100
+                                             )}%">
                                         </div>
                                     </div>
                                 </div>
@@ -409,7 +461,8 @@ function updateLeaderboard(userPointsData, orderBy = currentOrder) {
                                     ${allPointsRatio.toFixed(0)}%
                                 </span>
                             </div>
-                            `}
+                            `
+                            }
                         </div>
                         
                         <!-- Durum İkonu -->
@@ -420,31 +473,35 @@ function updateLeaderboard(userPointsData, orderBy = currentOrder) {
                 </div>
             </div>
         `;
-    }).join("");
+    })
+    .join("");
 }
 
 // user-points-calculated event listener'ını güncelle
 ipcRenderer.on("user-points-calculated", (event, data) => {
-    const { userPointsData: newUserPointsData, lowPerformers: newLowPerformers } = data;
-    userPointsData = newUserPointsData;
-    lowPerformers = newLowPerformers;
-    
-    // Developer listesini güncelle ve tamamlanma oranlarını göster
-    assigneeUser.innerHTML = '<option value="">Developer Seç (optional)</option>';
-    userPointsData.forEach((userData) => {
-        const option = document.createElement("option");
-        option.value = userData.accountId;
-        option.textContent = `${userData.displayName} (${userData.currentCompletionRatio.toFixed(1)}%) ${
-            userData.hasInProgressTasks ? "🔄" : "✅"
-        }`;
-        assigneeUser.appendChild(option);
-    });
+  const { userPointsData: newUserPointsData, lowPerformers: newLowPerformers } =
+    data;
+  userPointsData = newUserPointsData;
+  lowPerformers = newLowPerformers;
 
-    // Leaderboard'u güncelle
-    updateLeaderboard(userPointsData, currentOrder);
+  // Developer listesini güncelle ve tamamlanma oranlarını göster
+  assigneeUser.innerHTML = '<option value="">Developer Seç (optional)</option>';
+  userPointsData.forEach((userData) => {
+    const option = document.createElement("option");
+    option.value = userData.accountId;
+    option.textContent = `${
+      userData.displayName
+    } (${userData.currentCompletionRatio.toFixed(1)}%) ${
+      userData.hasInProgressTasks ? "🔄" : "✅"
+    }`;
+    assigneeUser.appendChild(option);
+  });
 
-    isCalculating = false;
-    checkButtonState();
+  // Leaderboard'u güncelle
+  updateLeaderboard(userPointsData, currentOrder);
+
+  isCalculating = false;
+  checkButtonState();
 });
 
 // Update user selection when assignment type changes
@@ -507,10 +564,14 @@ assignTask.addEventListener("click", () => {
 
   try {
     // In-progress'te işi olmayan Developerları filtrele
-    const availableUsers = userPointsData.filter(user => !user.hasInProgressTasks);
+    const availableUsers = userPointsData.filter(
+      (user) => !user.hasInProgressTasks
+    );
 
     if (availableUsers.length === 0) {
-      alert("Atama yapılabilecek uygun Developer bulunamadı! Tüm Developerların üzerinde in-progress task var.");
+      alert(
+        "Atama yapılabilecek uygun Developer bulunamadı! Tüm Developerların üzerinde in-progress task var."
+      );
       return;
     }
 
@@ -521,7 +582,9 @@ assignTask.addEventListener("click", () => {
           return;
         }
         selectedUserId = assigneeUser.value;
-        selectedUser = userPointsData.find(u => u.accountId === selectedUserId);
+        selectedUser = userPointsData.find(
+          (u) => u.accountId === selectedUserId
+        );
         if (selectedUser?.hasInProgressTasks) {
           alert("Seçilen Developernın üzerinde in-progress task var!");
           return;
@@ -530,33 +593,45 @@ assignTask.addEventListener("click", () => {
 
       case "under_80":
         // Performansı %80'in üzerinde olan ve in-progress'te işi olmayan Developerları filtrele
-        const lowPerformers = availableUsers.filter(user => user.currentCompletionRatio <= 80);
+        const lowPerformers = availableUsers.filter(
+          (user) => user.currentCompletionRatio <= 80
+        );
         if (lowPerformers.length > 0) {
-          selectedUser = lowPerformers[Math.floor(Math.random() * lowPerformers.length)];
+          selectedUser =
+            lowPerformers[Math.floor(Math.random() * lowPerformers.length)];
           selectedUserId = selectedUser.accountId;
         } else {
-          alert("Performansı %80'in altında olan ve uygun durumda Developer bulunamadı!");
+          alert(
+            "Performansı %80'in altında olan ve uygun durumda Developer bulunamadı!"
+          );
           return;
         }
         break;
 
       case "lowest_done":
         // Done puanı en düşük ve in-progress'te işi olmayan Developer
-        selectedUser = availableUsers.reduce((min, user) => 
-          !min || user.donePoints < min.donePoints ? user : min, null);
+        selectedUser = availableUsers.reduce(
+          (min, user) =>
+            !min || user.donePoints < min.donePoints ? user : min,
+          null
+        );
         selectedUserId = selectedUser.accountId;
         break;
 
       case "lowest_total":
         // Toplam puanı en düşük ve in-progress'te işi olmayan Developer
-        selectedUser = availableUsers.reduce((min, user) => 
-          !min || user.totalPoints < min.totalPoints ? user : min, null);
+        selectedUser = availableUsers.reduce(
+          (min, user) =>
+            !min || user.totalPoints < min.totalPoints ? user : min,
+          null
+        );
         selectedUserId = selectedUser.accountId;
         break;
 
       case "random":
         // In-progress'te işi olmayan Developerlar arasından rastgele seç
-        selectedUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
+        selectedUser =
+          availableUsers[Math.floor(Math.random() * availableUsers.length)];
         selectedUserId = selectedUser.accountId;
         break;
 
@@ -584,9 +659,8 @@ assignTask.addEventListener("click", () => {
       comment: taskComment.value.trim(),
       moveToSelectedForDev: moveToSelectedForDev.checked,
       isTestMode: testMode.checked,
-      assignmentType: assignmentType.value
+      assignmentType: assignmentType.value,
     });
-
   } catch (error) {
     console.error("Task atama sırasında hata:", error);
     alert("Task atama işlemi sırasında bir hata oluştu!");
