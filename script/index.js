@@ -705,6 +705,14 @@ const assignToSelim = document.getElementById("assignToSelim");
 const selimModal = document.getElementById("selimModal");
 const closeSelimModal = document.getElementById("closeSelimModal");
 
+taskToAssign.addEventListener("change", () => {
+  if (taskToAssign.value === "") {
+    assignToSelim.classList.add("hidden");
+  } else {
+    assignToSelim.classList.remove("hidden");
+  }
+});
+
 assignToSelim.addEventListener("click", () => {
   selimModal.classList.remove("hidden");
 });
