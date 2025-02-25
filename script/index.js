@@ -302,7 +302,7 @@ ipcRenderer.on("user-points-calculated", (event, data) => {
     lowPerformers = newLowPerformers;
     
     // Developer listesini güncelle ve tamamlanma oranlarını göster
-    assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
+    assigneeUser.innerHTML = '<option value="">Developer Seç (optional)</option>';
     userPointsData.forEach((userData) => {
         const option = document.createElement("option");
         option.value = userData.accountId;

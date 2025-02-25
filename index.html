@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Jira Helper</title>
+    <title>Jira Yardımcısı</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         ::-webkit-scrollbar {
@@ -156,7 +156,7 @@
     <!-- Sidebar -->
     <div id="sidebar" class="sidebar p-6">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-gray-800">Settings</h2>
+            <h2 class="text-xl font-bold text-gray-800">Ayarlar</h2>
             <button id="closeSidebar" class="text-gray-500 hover:text-gray-700">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -213,11 +213,11 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Performance Calculation Type</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Performance Hesaplama Türü</label>
                 <select id="performanceType"
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring" required>
-                    <option value="done">Done Points</option>
-                    <option value="all">All Points</option>
+                    <option value="done">Done Puanlar</option>
+                    <option value="all">Tüm Puanlar</option>
                 </select>
             </div>
 
@@ -248,7 +248,7 @@
                                 d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <h1 class="text-2xl font-bold text-gray-800">Jira Helper</h1>
+                    <h1 class="text-2xl font-bold text-gray-800">Jira Yardımcısı</h1>
                     <div class="w-6"></div>
                 </div>
             </div>
@@ -259,7 +259,7 @@
                     <!-- Task Assignment Panel -->
                     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-semibold text-gray-800">Task Assignment</h3>
+                            <h3 class="text-lg font-semibold text-gray-800">Task Management</h3>
                             <div class="flex space-x-2">
                                 <button id="editTargetPoints" class="text-blue-600 hover:text-blue-700 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -279,7 +279,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Task ID</label>
                                 <select id="taskToAssign"
                                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring" required>
-                                    <option value="">Select a task</option>
+                                    <option value="">Task Seç</option>
                                     <option value="manual">Manuel Task Gir</option>
                                 </select>
                             </div>
@@ -310,14 +310,14 @@
 
                             <!-- Assignment Type -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Assignment Type</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Task Atama Yöntemi</label>
                                 <select id="assignmentType"
                                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring" required>
-                                    <option value="lowest_done">Lowest Done</option>
-                                    <option value="lowest_total">Lowest Total</option>
-                                    <option value="random">Random</option>
-                                    <option value="specific">Specific</option>
-                                    <option value="under_80">Under %80 Performance</option>
+                                    <option value="lowest_done">Done Puanı En Düşük</option>
+                                    <option value="lowest_total">Toplam Puanı En Düşük</option>
+                                    <option value="random">Rastgele</option>
+                                    <option value="specific">Kişiye Özel</option>
+                                    <option value="under_80">%80 Performans Altı</option>
                                 </select>
                             </div>
 
@@ -326,14 +326,14 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Developer</label>
                                 <select id="assigneeUser"
                                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring">
-                                    <option value="">Select a Developer</option>
+                                    <option value="">Developer Seç</option>
                                 </select>
                             </div>
 
                             <!-- Assignment Button -->
                             <button id="assignTask"
                                 class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                                Start Process
+                                İşlemi Başlat
                             </button>
 
                             <!-- Selim'e Ata Butonu -->
@@ -349,7 +349,7 @@
                 <div class="lg:col-span-2 space-y-8">
                     <!-- Logs Panel -->
                     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Transaction Logs</h3>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">İşlem Logları</h3>
                         <div id="logs"
                             class="font-mono text-xs text-gray-700 h-[300px] overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200 break-all">
                         </div>
