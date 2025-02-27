@@ -160,7 +160,6 @@ async function getProjectUsers() {
 async function getUserAllTasks(accountId) {
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 2);
-  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
   // Kullanıcının e-posta adresini al
   let userEmail = "";
@@ -194,7 +193,6 @@ async function getUserAllTasks(accountId) {
     // PROJECT_KEY filtresi olmadan
     jqlQuery = `assignee = ${accountId}
       AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
-      AND updated <= "${lastDayOfMonth.toISOString().split("T")[0]}" 
       ORDER BY updated DESC`;
     logger.info(
       `${userEmail} için PROJECT_KEY filtresi olmadan puanlar hesaplanıyor...`
@@ -204,7 +202,6 @@ async function getUserAllTasks(accountId) {
     jqlQuery = `project = "${PROJECT_KEY}" 
       AND assignee = ${accountId}
       AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
-      AND updated <= "${lastDayOfMonth.toISOString().split("T")[0]}" 
       ORDER BY updated DESC`;
   }
 
