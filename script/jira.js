@@ -197,6 +197,8 @@ async function getUserAllTasks(accountId) {
     logger.info(
       `${userEmail} için PROJECT_KEY filtresi olmadan puanlar hesaplanıyor...`
     );
+
+    console.log(jqlQuery);
   } else {
     // Normal sorgu (PROJECT_KEY filtresi ile)
     jqlQuery = `project = "${PROJECT_KEY}" 
@@ -543,7 +545,7 @@ async function calculateUserPoints(users, performanceType = "done") {
       const completionRatio =
         targetPoints > 0 ? (calculatedPoints / targetPoints) * 100 : 0;
       const currentTargetPoints =
-        (targetPoints * workDaysUntilToday) / totalWorkDays;
+        ((targetPoints * workDaysUntilToday) / totalWorkDays).toFixed(2);
       const currentCompletionRatio =
         currentTargetPoints > 0
           ? (calculatedPoints / currentTargetPoints) * 100
