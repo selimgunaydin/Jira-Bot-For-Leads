@@ -60,7 +60,7 @@ ipcMain.on("update-config", (event, config) => {
 
 async function hasInProgressTasks(accountId) {
   try {
-    const jqlQuery = `project = "${PROJECT_KEY}" AND assignee = ${accountId} AND status = "In Progress"`;
+    const jqlQuery = `project = "${PROJECT_KEY}" AND assignee = ${accountId} AND status = "In Progress" OR status = "Selected for Development"`;
     const response = await axios.get(
       `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}`,
       {
