@@ -31,6 +31,7 @@ const automationMethod = document.getElementById("assignmentMethodAutomation");
 const sourceEmail = document.getElementById("sourceEmailAutomation");
 const automationComment = document.getElementById("automationComment");
 const automationUpdateStatus = document.getElementById("automationUpdateStatus");
+const automationIntervalInput = document.getElementById("automationInterval");
 
 jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL_LEAD") || "";
 email.value = localStorage.getItem("EMAIL_LEAD") || "";
@@ -42,6 +43,7 @@ excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS_LEAD") || "";
 sourceEmail.value = localStorage.getItem("SOURCE_EMAIL_LEAD") || "";
 automationComment.value = localStorage.getItem("AUTOMATION_COMMENT") || "";
 automationUpdateStatus.checked = localStorage.getItem("AUTOMATION_UPDATE_STATUS") === "true";
+automationIntervalInput.value = localStorage.getItem("AUTOMATION_INTERVAL") || "1";
 const configInputs = [
   jiraBaseUrl,
   email,
@@ -790,6 +792,7 @@ async function startAutomation() {
   const automationComment = document.getElementById('automationComment').value;
   const updateTaskStatus = document.getElementById('automationUpdateStatus').checked;
   const testMode = document.getElementById('testMode').checked;
+  const intervalMinutes = parseInt(document.getElementById('automationInterval').value) || 1;
 
   if (!sourceEmail) {
     log('Hata: Kaynak e-posta adresi gerekli');
@@ -813,19 +816,21 @@ async function startAutomation() {
     log(`Atama yöntemi: ${assignmentMethod}`);
     log(`Otomatik yorum: ${automationComment ? 'Var' : 'Yok'}`);
     log(`Durum güncellemesi: ${updateTaskStatus ? 'Aktif' : 'Pasif'}`);
+    log(`Çalışma aralığı: ${intervalMinutes} dakika`);
     log(`Test modu: ${testMode ? 'Aktif' : 'Pasif'}`);
 
     // Yorum ve durum güncellemesi bilgilerini localStorage'a kaydet
     localStorage.setItem("AUTOMATION_COMMENT", automationComment);
     localStorage.setItem("AUTOMATION_UPDATE_STATUS", updateTaskStatus.toString());
+    localStorage.setItem("AUTOMATION_INTERVAL", intervalMinutes);
 
     // İlk çalıştırma
     await runAutomation(sourceEmail, assignmentMethod, automationComment, updateTaskStatus, testMode);
 
-    // 5 dakikada bir çalıştır
+    // Belirlenen dakika aralığıyla çalıştır
     automationInterval = setInterval(async () => {
       await runAutomation(sourceEmail, assignmentMethod, automationComment, updateTaskStatus, testMode);
-    }, 1 * 60 * 1000); // 1 dakika
+    }, intervalMinutes * 60 * 1000); // dakika -> milisaniye dönüşümü
 
     isAutomationRunning = true;
 
@@ -879,6 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const stopAutomationBtn = document.getElementById('stopAutomation');
   const automationComment = document.getElementById('automationComment');
   const automationUpdateStatus = document.getElementById('automationUpdateStatus');
+  const automationIntervalInput = document.getElementById('automationInterval');
   
   if (startAutomationBtn) {
     startAutomationBtn.addEventListener('click', startAutomation);
@@ -898,6 +904,16 @@ document.addEventListener('DOMContentLoaded', function() {
   if (automationUpdateStatus) {
     automationUpdateStatus.addEventListener('change', () => {
       localStorage.setItem("AUTOMATION_UPDATE_STATUS", automationUpdateStatus.checked.toString());
+    });
+  }
+
+  if (automationIntervalInput) {
+    automationIntervalInput.addEventListener('change', () => {
+      const value = parseInt(automationIntervalInput.value) || 1;
+      // En az 1 dakika olmalı
+      const safeValue = Math.max(1, value);
+      automationIntervalInput.value = safeValue;
+      localStorage.setItem("AUTOMATION_INTERVAL", safeValue);
     });
   }
 });

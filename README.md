@@ -25,7 +25,7 @@ Bu uygulama, Jira projelerindeki görevlerin otomatik olarak atanmasını ve yö
 - **Özelleştirilebilir Ayarlar**
   - Test modu desteği
   - Hariç tutulacak kullanıcı listesi
-  - Esnek görev durumu seçenekleri
+  - Esnek task status seçenekleri
   - Modern ve kullanıcı dostu arayüz
 
 ## 💻 Kurulum
