@@ -224,9 +224,6 @@ async function getUserAllTasks(accountId) {
     jqlQuery = `assignee = ${accountId}
       AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
       ORDER BY updated DESC`;
-    logger.info(
-      `${userEmail} için PROJECT_KEY filtresi olmadan puanlar hesaplanıyor...`
-    );
 
     console.log(jqlQuery);
   } else {

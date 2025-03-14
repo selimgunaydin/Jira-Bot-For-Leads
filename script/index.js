@@ -106,6 +106,8 @@ let cachedTasks = [];
 let isUsersLoaded = false;
 let isTasksLoaded = false;
 let isCalculating = false;
+let isAutomationRunning = false;
+let automationInterval = null;
 let userPointsCache = {
   lowest_done: null,
   lowest_total: null,
@@ -789,52 +791,102 @@ async function startAutomation() {
   }
 
   try {
-    // Butonu devre dışı bırak
+    // Butonları güncelle
     const startAutomationBtn = document.getElementById('startAutomation');
+    const stopAutomationBtn = document.getElementById('stopAutomation');
+    
     startAutomationBtn.disabled = true;
     startAutomationBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    startAutomationBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>İşlem Yapılıyor...';
+    startAutomationBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Otomasyon Çalışıyor...';
+    
+    stopAutomationBtn.classList.remove('hidden');
+    stopAutomationBtn.disabled = false;
 
     log('Otomasyon başlatılıyor...');
     log(`Kaynak e-posta: ${sourceEmail}`);
     log(`Atama yöntemi: ${assignmentMethod}`);
     log(`Test modu: ${testMode ? 'Aktif' : 'Pasif'}`);
 
-    // Otomasyonu başlat
+    // İlk çalıştırma
+    await runAutomation(sourceEmail, assignmentMethod, testMode);
+
+    // 5 dakikada bir çalıştır
+    automationInterval = setInterval(async () => {
+      await runAutomation(sourceEmail, assignmentMethod, testMode);
+    }, 1 * 60 * 1000); // 1 dakika
+
+    isAutomationRunning = true;
+
+  } catch (error) {
+    log(`Hata: ${error.message}`);
+    stopAutomation();
+  }
+}
+
+async function runAutomation(sourceEmail, assignmentMethod, testMode) {
+  try {
     ipcRenderer.send('start-automation', {
       sourceEmail,
       assignmentMethod,
       isTestMode: testMode
     });
-
   } catch (error) {
-    log(`Hata: ${error.message}`);
-    // Butonu tekrar aktif et
-    const startAutomationBtn = document.getElementById('startAutomation');
-    startAutomationBtn.disabled = false;
-    startAutomationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    startAutomationBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
+    log(`Otomasyon çalıştırma hatası: ${error.message}`);
   }
+}
+
+function stopAutomation() {
+  if (automationInterval) {
+    clearInterval(automationInterval);
+    automationInterval = null;
+  }
+
+  isAutomationRunning = false;
+
+  // Butonları güncelle
+  const startAutomationBtn = document.getElementById('startAutomation');
+  const stopAutomationBtn = document.getElementById('stopAutomation');
+  
+  startAutomationBtn.disabled = false;
+  startAutomationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+  startAutomationBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
+  
+  stopAutomationBtn.classList.add('hidden');
+  stopAutomationBtn.disabled = true;
+
+  log('Otomasyon durduruldu');
 }
 
 // Event listener'ları ekle
 document.addEventListener('DOMContentLoaded', function() {
   // ... existing code ...
 
-  // Otomasyon başlatma butonu
   const startAutomationBtn = document.getElementById('startAutomation');
+  const stopAutomationBtn = document.getElementById('stopAutomation');
+  
   if (startAutomationBtn) {
     startAutomationBtn.addEventListener('click', startAutomation);
+  }
+  
+  if (stopAutomationBtn) {
+    stopAutomationBtn.addEventListener('click', stopAutomation);
   }
 });
 
 // Otomasyon tamamlandığında
 ipcRenderer.on('automation-completed', (event, result) => {
-  // Butonu tekrar aktif et
-  const startAutomationBtn = document.getElementById('startAutomation');
-  startAutomationBtn.disabled = false;
-  startAutomationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-  startAutomationBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
+  if (!isAutomationRunning) {
+    // Eğer otomasyon durdurulmuşsa butonları güncelle
+    const startAutomationBtn = document.getElementById('startAutomation');
+    const stopAutomationBtn = document.getElementById('stopAutomation');
+    
+    startAutomationBtn.disabled = false;
+    startAutomationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    startAutomationBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
+    
+    stopAutomationBtn.classList.add('hidden');
+    stopAutomationBtn.disabled = true;
+  }
 
   if (result.success) {
     log(result.message);
