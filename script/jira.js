@@ -1158,8 +1158,7 @@ ipcMain.on("start-automation", async (event, data) => {
     if (!tasks || tasks.length === 0) {
       logger.info("Atanacak task bulunamadı");
       event.reply("automation-completed", {
-        success: true,
-        message: "Atanacak task bulunamadı",
+        success: true
       });
       return;
     }
@@ -1185,8 +1184,20 @@ ipcMain.on("start-automation", async (event, data) => {
       // Eğer uygun developer kalmadıysa bildir ve devam et
       if (availableUsers.length === 0) {
         logger.warn(
-          `Hata: ${task.key} için uygun developer kalmadı. Tüm uygun developerlara task atanmış.`
+          `Hata: ${task.key} için uygun developer bulunamadı. Task unassign edilerek Selected for Development durumuna taşınıyor.`
         );
+        // Önce task'ı unassign et
+        await axios.put(
+          `${JIRA_BASE_URL}/rest/api/3/issue/${task.key}/assignee`,
+          {
+            accountId: null,
+          },
+          {
+            auth: { username: EMAIL, password: API_TOKEN },
+          }
+        );
+        // Sonra durumu güncelle
+        await updateTaskStatus(task.key, "Selected for Development");
         continue;
       }
 
