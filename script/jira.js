@@ -480,6 +480,10 @@ async function getRandomUser(users) {
   return users[randomIndex];
 }
 
+// Puan önbelleği: key = accountId, value = { done: puan, total: puan, timestamp: zaman }
+const userPointsCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 dakika önbellek süresi
+
 async function getUserWithLowestPoints(users, type = "done") {
   if (!users || users.length === 0) {
     return null;
@@ -487,36 +491,143 @@ async function getUserWithLowestPoints(users, type = "done") {
 
   let lowestPointsUser = null;
   let lowestPoints = Infinity;
-
+  
+  // Kullanıcı görevlerini tek seferde almak için
+  let taskMap = null;
+  const now = Date.now();
+  const usersNeedingUpdate = [];
+  
+  // Önce önbellekteki verileri kontrol et
   for (const user of users) {
-    const tasks = await getUserAllTasks(user.accountId);
-    let points = 0;
-
-    if (type === "done") {
-      // Sadece Done durumundaki taskların puanlarını topla
-      points = tasks.reduce((sum, task) => {
-        if (
-          task.fields.status.name === "Done" &&
-          task.fields.customfield_10028
-        ) {
-          return sum + task.fields.customfield_10028;
-        }
-        return sum;
-      }, 0);
+    const cachedData = userPointsCache.get(user.accountId);
+    
+    // Önbellekte veri var ve güncel mi kontrol et
+    if (cachedData && (now - cachedData.timestamp) < CACHE_TTL) {
+      const points = type === "done" ? cachedData.done : cachedData.total;
+      if (points < lowestPoints) {
+        lowestPoints = points;
+        lowestPointsUser = user;
+      }
     } else {
-      // Tüm taskların puanlarını topla
-      points = tasks.reduce((sum, task) => {
-        return sum + (task.fields.customfield_10028 || 0);
-      }, 0);
+      // Güncel veri yoksa, güncellenmesi gereken kullanıcıyı ekle
+      usersNeedingUpdate.push(user);
     }
-
-    if (points < lowestPoints) {
-      lowestPoints = points;
-      lowestPointsUser = user;
+  }
+  
+  // Eğer güncellenecek kullanıcı varsa, görevleri toplu al
+  if (usersNeedingUpdate.length > 0) {
+    taskMap = await getBulkUserTasks(usersNeedingUpdate);
+    
+    // Eksik verileri işle
+    for (const user of usersNeedingUpdate) {
+      const tasks = taskMap.get(user.accountId) || [];
+      const { donePoints, totalPoints } = calculatePoints(tasks);
+      
+      // Önbelleğe al
+      userPointsCache.set(user.accountId, {
+        done: donePoints,
+        total: totalPoints,
+        timestamp: now
+      });
+      
+      const points = type === "done" ? donePoints : totalPoints;
+      if (points < lowestPoints) {
+        lowestPoints = points;
+        lowestPointsUser = user;
+      }
     }
   }
 
   return lowestPointsUser;
+}
+
+// Tüm kullanıcılar için toplu task yükleme işlemi
+async function getBulkUserTasks(users) {
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 2);
+  const firstDayString = firstDayOfMonth.toISOString().split("T")[0];
+  
+  // Önbellek için
+  const taskCache = new Map();
+  
+  // Kullanıcı e-postalarını toplu olarak al
+  const userEmails = new Map();
+  
+  try {
+    // Dışlanan e-posta listesini al
+    const excludedEmails = global.mainWindow
+      ? await global.mainWindow.webContents.executeJavaScript(
+          `localStorage.getItem('EXCLUDED_FROM_PROJECT_KEY_FILTER')`,
+          true
+        )
+      : "";
+
+    const excludedEmailList = excludedEmails
+      ? excludedEmails.split(/[\n\r]+/).map((email) => email.trim().toLowerCase())
+      : [];
+    
+    // Tüm kullanıcılar için paralel e-posta sorgusu yap
+    await Promise.all(users.map(async (user) => {
+      try {
+        const userResponse = await axios.get(
+          `${JIRA_BASE_URL}/rest/api/3/user?accountId=${user.accountId}`,
+          {
+            auth: { username: EMAIL, password: API_TOKEN },
+          }
+        );
+        userEmails.set(user.accountId, userResponse.data.emailAddress.toLowerCase());
+      } catch (error) {
+        logger.error(`Kullanıcı e-posta adresi alınamadı: ${error.message}`);
+        userEmails.set(user.accountId, "");
+      }
+    }));
+    
+    // Her kullanıcı için task sorgularını oluştur ve çalıştır
+    const taskPromises = users.map(async (user) => {
+      const userEmail = userEmails.get(user.accountId) || "";
+      let jqlQuery = "";
+      
+      if (excludedEmailList.includes(userEmail)) {
+        // PROJECT_KEY filtresi olmadan
+        jqlQuery = `assignee = ${user.accountId}
+          AND updated >= "${firstDayString}" 
+          ORDER BY updated DESC`;
+      } else {
+        // Normal sorgu (PROJECT_KEY filtresi ile)
+        jqlQuery = `project = "${PROJECT_KEY}" 
+          AND assignee = ${user.accountId}
+          AND updated >= "${firstDayString}" 
+          ORDER BY updated DESC`;
+      }
+      
+      try {
+        const response = await axios.get(
+          `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(
+            jqlQuery
+          )}&maxResults=100`,
+          {
+            auth: { username: EMAIL, password: API_TOKEN },
+          }
+        );
+        taskCache.set(user.accountId, response.data.issues);
+      } catch (error) {
+        logger.error(
+          `Hata oluştu (Kullanıcı taskları çekilirken): ${
+            error.response ? JSON.stringify(error.response.data) : error.message
+          }`
+        );
+        taskCache.set(user.accountId, []);
+      }
+    });
+    
+    // Tüm API çağrılarının tamamlanmasını bekle
+    await Promise.all(taskPromises);
+    
+    return taskCache;
+  } catch (error) {
+    logger.error(`Toplu task yükleme işleminde hata: ${error.message}`);
+    return new Map();
+  }
 }
 
 // Developer puanlarını hesapla
@@ -558,10 +669,13 @@ async function calculateUserPoints(users, performanceType = "done") {
 
     // Tüm hedef puanları tek seferde al
     const targetPointsMap = await getTargetPointsForUsers(users);
-
-    // Tüm kullanıcıların task'larını paralel olarak çek
-    const userDataPromises = users.map(async (user) => {
-      const tasks = await getUserAllTasks(user.accountId);
+    
+    // Tüm kullanıcıların task verilerini toplu olarak çek
+    const userTasksMap = await getBulkUserTasks(users);
+    
+    // Tüm kullanıcılar için puan hesaplamalarını yap
+    userPointsData = users.map((user) => {
+      const tasks = userTasksMap.get(user.accountId) || [];
       const { donePoints, totalPoints } = calculatePoints(tasks);
 
       const targetPoints = targetPointsMap.get(user.emailAddress) || 0;
@@ -589,9 +703,6 @@ async function calculateUserPoints(users, performanceType = "done") {
         calculatedPoints,
       };
     });
-
-    // Tüm kullanıcı verilerini paralel olarak işle
-    userPointsData = await Promise.all(userDataPromises);
 
     // Kullanıcı verilerini logla ve düşük performanslıları belirle
     userPointsData.forEach((userData) => {
@@ -803,7 +914,7 @@ async function findLowestTotalAssignee() {
     }
 
     // En düşük toplam puana sahip Developeryı bul
-    const lowestUser = await getUserWithLowestPoints(availableUsers, "all");
+    const lowestUser = await getUserWithLowestPoints(availableUsers, "total");
     return lowestUser ? {
       accountId: lowestUser.accountId,
       displayName: lowestUser.displayName,
@@ -812,7 +923,7 @@ async function findLowestTotalAssignee() {
       targetPoints: lowestUser.targetPoints,
     } : null;
   } catch (error) {
-    logger.error(`Hata oluştu (lowestTotal): ${error.message}`);
+    logger.error(`En düşük toplam puanlı kullanıcı bulunamadı: ${error.message}`);
     return null;
   }
 }
@@ -840,7 +951,7 @@ async function findLowestDoneAssignee() {
       targetPoints: lowestUser.targetPoints,
     } : null;
   } catch (error) {
-    logger.error(`Hata oluştu (lowestDone): ${error.message}`);
+    logger.error(`En düşük done puanlı kullanıcı bulunamadı: ${error.message}`);
     return null;
   }
 }
@@ -1026,17 +1137,36 @@ ipcMain.on("start-automation", async (event, data) => {
 
     logger.info(`${tasks.length} adet task bulundu`);
 
+    // Bu çalıştırmada task atanmış developerların listesi
+    const assignedDeveloperIds = new Set();
+
     // Her task için atama işlemini gerçekleştir
     for (const task of tasks) {
       logger.info(`Task işleniyor: ${task.key}`);
       
+      // Tüm developerları al
+      const allUsers = await getProjectUsers();
+      
+      // Daha önce bu çalıştırmada task atanmış developerları filtrele
+      const availableUsers = allUsers.filter(user => 
+        !user.hasInProgressTasks && !assignedDeveloperIds.has(user.accountId)
+      );
+      
+      // Eğer uygun developer kalmadıysa bildir ve devam et
+      if (availableUsers.length === 0) {
+        logger.warn(`Hata: ${task.key} için uygun developer kalmadı. Tüm uygun developerlara task atanmış.`);
+        continue;
+      }
+      
       let assignee;
       switch (assignmentMethod) {
         case 'lowestTotalAutomation':
-          assignee = await findLowestTotalAssignee();
+          // Filtrelenmiş listeyi kullan
+          assignee = await getUserWithLowestPoints(availableUsers, "total");
           break;
         case 'lowestDoneAutomation':
-          assignee = await findLowestDoneAssignee();
+          // Filtrelenmiş listeyi kullan
+          assignee = await getUserWithLowestPoints(availableUsers, "done");
           break;
       }
 
@@ -1045,12 +1175,17 @@ ipcMain.on("start-automation", async (event, data) => {
         continue;
       }
 
+      // Developer ID'sini atanmış listeye ekle
+      assignedDeveloperIds.add(assignee.accountId);
+      
       if (!isTestMode) {
         const result = await assignTaskToUser(task.key, assignee.accountId, "", false, assignmentMethod);
         if (result.success) {
           logger.info(`Task atandı: ${task.key} -> ${assignee.displayName}`);
         } else {
           logger.warn(`Task atanamadı: ${task.key} -> ${assignee.displayName}`);
+          // Başarısız atama durumunda, developerı atanmış listesinden çıkar
+          assignedDeveloperIds.delete(assignee.accountId);
         }
       } else {
         logger.info(`[TEST MODU] Task atanacaktı: ${task.key} -> ${assignee.displayName}`);
