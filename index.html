@@ -466,6 +466,44 @@
                 </button>
               </div>
             </div>
+                    <!-- Otomasyon Ayarları -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">Otomasyon Ayarları</h3>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Kaynak E-posta</label>
+              <input
+                type="email"
+                id="sourceEmailAutomation"
+                class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+                placeholder="kaynak@email.com"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Atama Yöntemi</label>
+              <select
+                id="assignmentMethodAutomation"
+                class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+                required
+              >
+                <option value="lowestTotalAutomation">Toplam Puanı En Düşük</option>
+                <option value="lowestDoneAutomation">Done Puanı En Düşük</option>
+              </select>
+            </div>
+
+            <button
+              id="startAutomation"
+              class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+              </svg>
+              <span>Otomasyonu Başlat</span>
+            </button>
+          </div>
+        </div>
           </div>
 
           <!-- Right Column: Statistics and Logs -->

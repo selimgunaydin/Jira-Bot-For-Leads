@@ -741,6 +741,83 @@ function logSummary(
   logger.info("=== Hesaplama Tamamlandı ===\n");
 }
 
+// Otomasyon fonksiyonları
+async function getTasksBySourceEmail(sourceEmail) {
+  try {
+    const jqlQuery = `status = "To Do" AND assignee = "${sourceEmail}"`;
+    const response = await axios.get(
+      `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}`,
+      {
+        auth: { username: EMAIL, password: API_TOKEN },
+      }
+    );
+    return response.data.issues;
+  } catch (error) {
+    logger.error(
+      `Hata oluştu (kaynak e-postaya göre task çekme): ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
+    return [];
+  }
+}
+
+async function findLowestTotalAssignee() {
+  try {
+    // Tüm Developerları al
+    const users = await getProjectUsers();
+    
+    // In progress'te işi olmayan Developerları filtrele
+    const availableUsers = users.filter(user => !user.hasInProgressTasks);
+    
+    if (availableUsers.length === 0) {
+      logger.warn("Uygun Developer bulunamadı");
+      return null;
+    }
+
+    // En düşük toplam puana sahip Developeryı bul
+    const lowestUser = await getUserWithLowestPoints(availableUsers, "all");
+    return lowestUser ? {
+      accountId: lowestUser.accountId,
+      displayName: lowestUser.displayName,
+      emailAddress: lowestUser.emailAddress,
+      hasInProgressTasks: lowestUser.hasInProgressTasks,
+      targetPoints: lowestUser.targetPoints,
+    } : null;
+  } catch (error) {
+    logger.error(`Hata oluştu (lowestTotal): ${error.message}`);
+    return null;
+  }
+}
+
+async function findLowestDoneAssignee() {
+  try {
+    // Tüm Developerları al
+    const users = await getProjectUsers();
+    
+    // In progress'te işi olmayan Developerları filtrele
+    const availableUsers = users.filter(user => !user.hasInProgressTasks);
+    
+    if (availableUsers.length === 0) {
+      logger.warn("Uygun Developer bulunamadı");
+      return null;
+    }
+
+    // En düşük done puana sahip Developeryı bul
+    const lowestUser = await getUserWithLowestPoints(availableUsers, "done");
+    return lowestUser ? {
+      accountId: lowestUser.accountId,
+      displayName: lowestUser.displayName,
+      emailAddress: lowestUser.emailAddress,
+      hasInProgressTasks: lowestUser.hasInProgressTasks,
+      targetPoints: lowestUser.targetPoints,
+    } : null;
+  } catch (error) {
+    logger.error(`Hata oluştu (lowestDone): ${error.message}`);
+    return null;
+  }
+}
+
 // IPC Event Listeners
 ipcMain.on("get-project-users", async (event) => {
   try {
@@ -902,6 +979,71 @@ ipcMain.on("save-target-points", async (event, data) => {
   }
 });
 
+ipcMain.on("start-automation", async (event, data) => {
+  try {
+    const { sourceEmail, assignmentMethod, isTestMode } = data;
+    
+    logger.info("=== Otomasyon Başlatılıyor ===");
+    logger.info(`Kaynak E-posta: ${sourceEmail}`);
+    logger.info(`Atama Yöntemi: ${assignmentMethod}`);
+    logger.info(`Test Modu: ${isTestMode ? 'Aktif' : 'Pasif'}`);
+
+    // Todo durumundaki ve source_email'e atanmış taskları al
+    const tasks = await getTasksBySourceEmail(sourceEmail);
+    
+    if (!tasks || tasks.length === 0) {
+      logger.info("Atanacak task bulunamadı");
+      event.reply("automation-completed", { success: true, message: "Atanacak task bulunamadı" });
+      return;
+    }
+
+    logger.info(`${tasks.length} adet task bulundu`);
+
+    // Her task için atama işlemini gerçekleştir
+    for (const task of tasks) {
+      logger.info(`Task işleniyor: ${task.key}`);
+      
+      let assignee;
+      switch (assignmentMethod) {
+        case 'lowestTotalAutomation':
+          assignee = await findLowestTotalAssignee();
+          break;
+        case 'lowestDoneAutomation':
+          assignee = await findLowestDoneAssignee();
+          break;
+      }
+
+      if (!assignee) {
+        logger.warn(`Hata: ${task.key} için atanacak developer bulunamadı`);
+        continue;
+      }
+
+      if (!isTestMode) {
+        const result = await assignTaskToUser(task.key, assignee.accountId, "", false, assignmentMethod);
+        if (result.success) {
+          logger.info(`Task atandı: ${task.key} -> ${assignee.displayName}`);
+        } else {
+          logger.warn(`Task atanamadı: ${task.key} -> ${assignee.displayName}`);
+        }
+      } else {
+        logger.info(`[TEST MODU] Task atanacaktı: ${task.key} -> ${assignee.displayName}`);
+      }
+    }
+
+    logger.info("=== Otomasyon Tamamlandı ===");
+    event.reply("automation-completed", {
+      success: true,
+      message: "Otomasyon tamamlandı",
+    });
+  } catch (error) {
+    logger.error(`Otomasyon sırasında hata oluştu: ${error.message}`);
+    event.reply("automation-completed", {
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 module.exports = {
   getProjectUsers,
   getUserAllTasks,
@@ -909,4 +1051,8 @@ module.exports = {
   assignTaskToUser,
   getRandomUser,
   getUserWithLowestPoints,
+  getTasksBySourceEmail,
+  findLowestTotalAssignee,
+  findLowestDoneAssignee,
+  calculateUserPoints,
 };

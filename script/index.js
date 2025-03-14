@@ -27,6 +27,8 @@ const apiToken = document.getElementById("apiToken");
 const projectKey = document.getElementById("projectKey");
 const taskStatus = document.getElementById("taskStatus");
 const excludedEmails = document.getElementById("excludedEmails");
+const automationMethod = document.getElementById("assignmentMethodAutomation");
+const sourceEmail = document.getElementById("sourceEmailAutomation");
 
 jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL_LEAD") || "";
 email.value = localStorage.getItem("EMAIL_LEAD") || "";
@@ -35,7 +37,7 @@ projectKey.value = localStorage.getItem("PROJECT_KEY_LEAD") || "S1";
 taskStatus.value =
   localStorage.getItem("TASK_STATUS_LEAD") || "Selected for Development";
 excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS_LEAD") || "";
-
+sourceEmail.value = localStorage.getItem("SOURCE_EMAIL_LEAD") || "";
 const configInputs = [
   jiraBaseUrl,
   email,
@@ -52,7 +54,7 @@ configInputs.forEach((input) => {
     localStorage.setItem("PROJECT_KEY_LEAD", projectKey.value);
     localStorage.setItem("TASK_STATUS_LEAD", taskStatus.value);
     localStorage.setItem("EXCLUDED_EMAILS_LEAD", excludedEmails.value);
-
+    localStorage.setItem("SOURCE_EMAIL_LEAD", sourceEmail.value);
     ipcRenderer.send("update-config", {
       JIRA_BASE_URL: jiraBaseUrl.value,
       EMAIL: email.value,
@@ -60,6 +62,7 @@ configInputs.forEach((input) => {
       PROJECT_KEY: projectKey.value,
       TASK_STATUS: taskStatus.value,
       EXCLUDED_EMAILS: excludedEmails.value,
+      SOURCE_EMAIL: sourceEmail.value,
     });
   });
 });
@@ -72,6 +75,7 @@ window.addEventListener("load", () => {
     PROJECT_KEY: projectKey.value,
     TASK_STATUS: taskStatus.value,
     EXCLUDED_EMAILS: excludedEmails.value,
+    SOURCE_EMAIL: sourceEmail.value,
   });
 });
 
@@ -725,5 +729,79 @@ closeSelimModal.addEventListener("click", () => {
 selimModal.addEventListener("click", (e) => {
   if (e.target === selimModal) {
     selimModal.classList.add("hidden");
+  }
+});
+
+// Log fonksiyonu
+function log(message) {
+  const logs = document.getElementById('logs');
+  const formattedMessage = message.trim() + '\n';
+  logs.textContent += formattedMessage;
+  logs.scrollTop = logs.scrollHeight;
+}
+
+// Otomasyon fonksiyonları
+async function startAutomation() {
+  const sourceEmail = document.getElementById('sourceEmailAutomation').value;
+  const assignmentMethod = document.getElementById('assignmentMethodAutomation').value;
+  const testMode = document.getElementById('testMode').checked;
+
+  if (!sourceEmail) {
+    log('Hata: Kaynak e-posta adresi gerekli');
+    return;
+  }
+
+  try {
+    // Butonu devre dışı bırak
+    const startAutomationBtn = document.getElementById('startAutomation');
+    startAutomationBtn.disabled = true;
+    startAutomationBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    startAutomationBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>İşlem Yapılıyor...';
+
+    log('Otomasyon başlatılıyor...');
+    log(`Kaynak e-posta: ${sourceEmail}`);
+    log(`Atama yöntemi: ${assignmentMethod}`);
+    log(`Test modu: ${testMode ? 'Aktif' : 'Pasif'}`);
+
+    // Otomasyonu başlat
+    ipcRenderer.send('start-automation', {
+      sourceEmail,
+      assignmentMethod,
+      isTestMode: testMode
+    });
+
+  } catch (error) {
+    log(`Hata: ${error.message}`);
+    // Butonu tekrar aktif et
+    const startAutomationBtn = document.getElementById('startAutomation');
+    startAutomationBtn.disabled = false;
+    startAutomationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    startAutomationBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
+  }
+}
+
+// Event listener'ları ekle
+document.addEventListener('DOMContentLoaded', function() {
+  // ... existing code ...
+
+  // Otomasyon başlatma butonu
+  const startAutomationBtn = document.getElementById('startAutomation');
+  if (startAutomationBtn) {
+    startAutomationBtn.addEventListener('click', startAutomation);
+  }
+});
+
+// Otomasyon tamamlandığında
+ipcRenderer.on('automation-completed', (event, result) => {
+  // Butonu tekrar aktif et
+  const startAutomationBtn = document.getElementById('startAutomation');
+  startAutomationBtn.disabled = false;
+  startAutomationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+  startAutomationBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
+
+  if (result.success) {
+    log(result.message);
+  } else {
+    log(`Hata: ${result.error}`);
   }
 });
