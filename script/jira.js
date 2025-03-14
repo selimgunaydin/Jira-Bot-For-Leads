@@ -1119,11 +1119,13 @@ ipcMain.on("save-target-points", async (event, data) => {
 
 ipcMain.on("start-automation", async (event, data) => {
   try {
-    const { sourceEmail, assignmentMethod, isTestMode } = data;
+    const { sourceEmail, assignmentMethod, automationComment, updateTaskStatus, isTestMode } = data;
     
     logger.info("=== Otomasyon Başlatılıyor ===");
     logger.info(`Kaynak E-posta: ${sourceEmail}`);
     logger.info(`Atama Yöntemi: ${assignmentMethod}`);
+    logger.info(`Otomatik Yorum: ${automationComment ? 'Var' : 'Yok'}`);
+    logger.info(`Durum Güncellemesi: ${updateTaskStatus ? 'Aktif' : 'Pasif'}`);
     logger.info(`Test Modu: ${isTestMode ? 'Aktif' : 'Pasif'}`);
 
     // Todo durumundaki ve source_email'e atanmış taskları al
@@ -1179,9 +1181,11 @@ ipcMain.on("start-automation", async (event, data) => {
       assignedDeveloperIds.add(assignee.accountId);
       
       if (!isTestMode) {
-        const result = await assignTaskToUser(task.key, assignee.accountId, "", false, assignmentMethod);
+        const result = await assignTaskToUser(task.key, assignee.accountId, automationComment, updateTaskStatus, assignmentMethod);
         if (result.success) {
           logger.info(`Task atandı: ${task.key} -> ${assignee.displayName}`);
+          logger.info(`Yorum: ${automationComment ? 'Eklendi' : 'Eklenmedi'}`);
+          logger.info(`Durum: ${updateTaskStatus ? '"Selected for Development" olarak güncellendi' : 'Güncellenmedi'}`);
         } else {
           logger.warn(`Task atanamadı: ${task.key} -> ${assignee.displayName}`);
           // Başarısız atama durumunda, developerı atanmış listesinden çıkar
@@ -1189,6 +1193,12 @@ ipcMain.on("start-automation", async (event, data) => {
         }
       } else {
         logger.info(`[TEST MODU] Task atanacaktı: ${task.key} -> ${assignee.displayName}`);
+        if (automationComment) {
+          logger.info(`[TEST MODU] Yorum eklenecekti: "${automationComment}"`);
+        }
+        if (updateTaskStatus) {
+          logger.info(`[TEST MODU] Görev durumu "Selected for Development" olarak güncellenecekti`);
+        }
       }
     }
 

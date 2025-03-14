@@ -29,6 +29,8 @@ const taskStatus = document.getElementById("taskStatus");
 const excludedEmails = document.getElementById("excludedEmails");
 const automationMethod = document.getElementById("assignmentMethodAutomation");
 const sourceEmail = document.getElementById("sourceEmailAutomation");
+const automationComment = document.getElementById("automationComment");
+const automationUpdateStatus = document.getElementById("automationUpdateStatus");
 
 jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL_LEAD") || "";
 email.value = localStorage.getItem("EMAIL_LEAD") || "";
@@ -38,6 +40,8 @@ taskStatus.value =
   localStorage.getItem("TASK_STATUS_LEAD") || "Selected for Development";
 excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS_LEAD") || "";
 sourceEmail.value = localStorage.getItem("SOURCE_EMAIL_LEAD") || "";
+automationComment.value = localStorage.getItem("AUTOMATION_COMMENT") || "";
+automationUpdateStatus.checked = localStorage.getItem("AUTOMATION_UPDATE_STATUS") === "true";
 const configInputs = [
   jiraBaseUrl,
   email,
@@ -783,6 +787,8 @@ function log(message) {
 async function startAutomation() {
   const sourceEmail = document.getElementById('sourceEmailAutomation').value;
   const assignmentMethod = document.getElementById('assignmentMethodAutomation').value;
+  const automationComment = document.getElementById('automationComment').value;
+  const updateTaskStatus = document.getElementById('automationUpdateStatus').checked;
   const testMode = document.getElementById('testMode').checked;
 
   if (!sourceEmail) {
@@ -805,14 +811,20 @@ async function startAutomation() {
     log('Otomasyon başlatılıyor...');
     log(`Kaynak e-posta: ${sourceEmail}`);
     log(`Atama yöntemi: ${assignmentMethod}`);
+    log(`Otomatik yorum: ${automationComment ? 'Var' : 'Yok'}`);
+    log(`Durum güncellemesi: ${updateTaskStatus ? 'Aktif' : 'Pasif'}`);
     log(`Test modu: ${testMode ? 'Aktif' : 'Pasif'}`);
 
+    // Yorum ve durum güncellemesi bilgilerini localStorage'a kaydet
+    localStorage.setItem("AUTOMATION_COMMENT", automationComment);
+    localStorage.setItem("AUTOMATION_UPDATE_STATUS", updateTaskStatus.toString());
+
     // İlk çalıştırma
-    await runAutomation(sourceEmail, assignmentMethod, testMode);
+    await runAutomation(sourceEmail, assignmentMethod, automationComment, updateTaskStatus, testMode);
 
     // 5 dakikada bir çalıştır
     automationInterval = setInterval(async () => {
-      await runAutomation(sourceEmail, assignmentMethod, testMode);
+      await runAutomation(sourceEmail, assignmentMethod, automationComment, updateTaskStatus, testMode);
     }, 1 * 60 * 1000); // 1 dakika
 
     isAutomationRunning = true;
@@ -823,11 +835,13 @@ async function startAutomation() {
   }
 }
 
-async function runAutomation(sourceEmail, assignmentMethod, testMode) {
+async function runAutomation(sourceEmail, assignmentMethod, automationComment, updateTaskStatus, testMode) {
   try {
     ipcRenderer.send('start-automation', {
       sourceEmail,
       assignmentMethod,
+      automationComment,
+      updateTaskStatus,
       isTestMode: testMode
     });
   } catch (error) {
@@ -863,6 +877,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const startAutomationBtn = document.getElementById('startAutomation');
   const stopAutomationBtn = document.getElementById('stopAutomation');
+  const automationComment = document.getElementById('automationComment');
+  const automationUpdateStatus = document.getElementById('automationUpdateStatus');
   
   if (startAutomationBtn) {
     startAutomationBtn.addEventListener('click', startAutomation);
@@ -870,6 +886,19 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (stopAutomationBtn) {
     stopAutomationBtn.addEventListener('click', stopAutomation);
+  }
+
+  // Otomasyon ayarlarının değişikliklerini local storage'a kaydet
+  if (automationComment) {
+    automationComment.addEventListener('change', () => {
+      localStorage.setItem("AUTOMATION_COMMENT", automationComment.value);
+    });
+  }
+
+  if (automationUpdateStatus) {
+    automationUpdateStatus.addEventListener('change', () => {
+      localStorage.setItem("AUTOMATION_UPDATE_STATUS", automationUpdateStatus.checked.toString());
+    });
   }
 });
 
