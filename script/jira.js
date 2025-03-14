@@ -84,11 +84,12 @@ async function getProjectUsers() {
 
     // localStorage'den kullanıcı verilerini kontrol et
     if (global.mainWindow) {
-      const cachedUsersData = await global.mainWindow.webContents.executeJavaScript(
-        `localStorage.getItem('CACHED_USERS_DATA')`,
-        true
-      );
-      
+      const cachedUsersData =
+        await global.mainWindow.webContents.executeJavaScript(
+          `localStorage.getItem('CACHED_USERS_DATA')`,
+          true
+        );
+
       if (cachedUsersData) {
         try {
           const users = JSON.parse(cachedUsersData);
@@ -171,7 +172,9 @@ async function getProjectUsers() {
     // Kullanıcı verilerini localStorage'e kaydet
     if (global.mainWindow) {
       await global.mainWindow.webContents.executeJavaScript(
-        `localStorage.setItem('CACHED_USERS_DATA', '${JSON.stringify(activeUsers)}')`,
+        `localStorage.setItem('CACHED_USERS_DATA', '${JSON.stringify(
+          activeUsers
+        )}')`,
         true
       );
     }
@@ -491,18 +494,18 @@ async function getUserWithLowestPoints(users, type = "done") {
 
   let lowestPointsUser = null;
   let lowestPoints = Infinity;
-  
+
   // Kullanıcı görevlerini tek seferde almak için
   let taskMap = null;
   const now = Date.now();
   const usersNeedingUpdate = [];
-  
+
   // Önce önbellekteki verileri kontrol et
   for (const user of users) {
     const cachedData = userPointsCache.get(user.accountId);
-    
+
     // Önbellekte veri var ve güncel mi kontrol et
-    if (cachedData && (now - cachedData.timestamp) < CACHE_TTL) {
+    if (cachedData && now - cachedData.timestamp < CACHE_TTL) {
       const points = type === "done" ? cachedData.done : cachedData.total;
       if (points < lowestPoints) {
         lowestPoints = points;
@@ -513,23 +516,23 @@ async function getUserWithLowestPoints(users, type = "done") {
       usersNeedingUpdate.push(user);
     }
   }
-  
+
   // Eğer güncellenecek kullanıcı varsa, görevleri toplu al
   if (usersNeedingUpdate.length > 0) {
     taskMap = await getBulkUserTasks(usersNeedingUpdate);
-    
+
     // Eksik verileri işle
     for (const user of usersNeedingUpdate) {
       const tasks = taskMap.get(user.accountId) || [];
       const { donePoints, totalPoints } = calculatePoints(tasks);
-      
+
       // Önbelleğe al
       userPointsCache.set(user.accountId, {
         done: donePoints,
         total: totalPoints,
-        timestamp: now
+        timestamp: now,
       });
-      
+
       const points = type === "done" ? donePoints : totalPoints;
       if (points < lowestPoints) {
         lowestPoints = points;
@@ -546,13 +549,13 @@ async function getBulkUserTasks(users) {
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 2);
   const firstDayString = firstDayOfMonth.toISOString().split("T")[0];
-  
+
   // Önbellek için
   const taskCache = new Map();
-  
+
   // Kullanıcı e-postalarını toplu olarak al
   const userEmails = new Map();
-  
+
   try {
     // Dışlanan e-posta listesini al
     const excludedEmails = global.mainWindow
@@ -563,30 +566,37 @@ async function getBulkUserTasks(users) {
       : "";
 
     const excludedEmailList = excludedEmails
-      ? excludedEmails.split(/[\n\r]+/).map((email) => email.trim().toLowerCase())
+      ? excludedEmails
+          .split(/[\n\r]+/)
+          .map((email) => email.trim().toLowerCase())
       : [];
-    
+
     // Tüm kullanıcılar için paralel e-posta sorgusu yap
-    await Promise.all(users.map(async (user) => {
-      try {
-        const userResponse = await axios.get(
-          `${JIRA_BASE_URL}/rest/api/3/user?accountId=${user.accountId}`,
-          {
-            auth: { username: EMAIL, password: API_TOKEN },
-          }
-        );
-        userEmails.set(user.accountId, userResponse.data.emailAddress.toLowerCase());
-      } catch (error) {
-        logger.error(`Kullanıcı e-posta adresi alınamadı: ${error.message}`);
-        userEmails.set(user.accountId, "");
-      }
-    }));
-    
+    await Promise.all(
+      users.map(async (user) => {
+        try {
+          const userResponse = await axios.get(
+            `${JIRA_BASE_URL}/rest/api/3/user?accountId=${user.accountId}`,
+            {
+              auth: { username: EMAIL, password: API_TOKEN },
+            }
+          );
+          userEmails.set(
+            user.accountId,
+            userResponse.data.emailAddress.toLowerCase()
+          );
+        } catch (error) {
+          logger.error(`Kullanıcı e-posta adresi alınamadı: ${error.message}`);
+          userEmails.set(user.accountId, "");
+        }
+      })
+    );
+
     // Her kullanıcı için task sorgularını oluştur ve çalıştır
     const taskPromises = users.map(async (user) => {
       const userEmail = userEmails.get(user.accountId) || "";
       let jqlQuery = "";
-      
+
       if (excludedEmailList.includes(userEmail)) {
         // PROJECT_KEY filtresi olmadan
         jqlQuery = `assignee = ${user.accountId}
@@ -599,7 +609,7 @@ async function getBulkUserTasks(users) {
           AND updated >= "${firstDayString}" 
           ORDER BY updated DESC`;
       }
-      
+
       try {
         const response = await axios.get(
           `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(
@@ -619,10 +629,10 @@ async function getBulkUserTasks(users) {
         taskCache.set(user.accountId, []);
       }
     });
-    
+
     // Tüm API çağrılarının tamamlanmasını bekle
     await Promise.all(taskPromises);
-    
+
     return taskCache;
   } catch (error) {
     logger.error(`Toplu task yükleme işleminde hata: ${error.message}`);
@@ -669,10 +679,10 @@ async function calculateUserPoints(users, performanceType = "done") {
 
     // Tüm hedef puanları tek seferde al
     const targetPointsMap = await getTargetPointsForUsers(users);
-    
+
     // Tüm kullanıcıların task verilerini toplu olarak çek
     const userTasksMap = await getBulkUserTasks(users);
-    
+
     // Tüm kullanıcılar için puan hesaplamalarını yap
     userPointsData = users.map((user) => {
       const tasks = userTasksMap.get(user.accountId) || [];
@@ -685,8 +695,10 @@ async function calculateUserPoints(users, performanceType = "done") {
       // Oranları hesapla
       const completionRatio =
         targetPoints > 0 ? (calculatedPoints / targetPoints) * 100 : 0;
-      const currentTargetPoints =
-        ((targetPoints * workDaysUntilToday) / totalWorkDays).toFixed(2);
+      const currentTargetPoints = (
+        (targetPoints * workDaysUntilToday) /
+        totalWorkDays
+      ).toFixed(2);
       const currentCompletionRatio =
         currentTargetPoints > 0
           ? (calculatedPoints / currentTargetPoints) * 100
@@ -904,10 +916,10 @@ async function findLowestTotalAssignee() {
   try {
     // Tüm Developerları al
     const users = await getProjectUsers();
-    
+
     // In progress'te işi olmayan Developerları filtrele
-    const availableUsers = users.filter(user => !user.hasInProgressTasks);
-    
+    const availableUsers = users.filter((user) => !user.hasInProgressTasks);
+
     if (availableUsers.length === 0) {
       logger.warn("Uygun Developer bulunamadı");
       return null;
@@ -915,15 +927,19 @@ async function findLowestTotalAssignee() {
 
     // En düşük toplam puana sahip Developeryı bul
     const lowestUser = await getUserWithLowestPoints(availableUsers, "total");
-    return lowestUser ? {
-      accountId: lowestUser.accountId,
-      displayName: lowestUser.displayName,
-      emailAddress: lowestUser.emailAddress,
-      hasInProgressTasks: lowestUser.hasInProgressTasks,
-      targetPoints: lowestUser.targetPoints,
-    } : null;
+    return lowestUser
+      ? {
+          accountId: lowestUser.accountId,
+          displayName: lowestUser.displayName,
+          emailAddress: lowestUser.emailAddress,
+          hasInProgressTasks: lowestUser.hasInProgressTasks,
+          targetPoints: lowestUser.targetPoints,
+        }
+      : null;
   } catch (error) {
-    logger.error(`En düşük toplam puanlı kullanıcı bulunamadı: ${error.message}`);
+    logger.error(
+      `En düşük toplam puanlı kullanıcı bulunamadı: ${error.message}`
+    );
     return null;
   }
 }
@@ -932,10 +948,10 @@ async function findLowestDoneAssignee() {
   try {
     // Tüm Developerları al
     const users = await getProjectUsers();
-    
+
     // In progress'te işi olmayan Developerları filtrele
-    const availableUsers = users.filter(user => !user.hasInProgressTasks);
-    
+    const availableUsers = users.filter((user) => !user.hasInProgressTasks);
+
     if (availableUsers.length === 0) {
       logger.warn("Uygun Developer bulunamadı");
       return null;
@@ -943,13 +959,15 @@ async function findLowestDoneAssignee() {
 
     // En düşük done puana sahip Developeryı bul
     const lowestUser = await getUserWithLowestPoints(availableUsers, "done");
-    return lowestUser ? {
-      accountId: lowestUser.accountId,
-      displayName: lowestUser.displayName,
-      emailAddress: lowestUser.emailAddress,
-      hasInProgressTasks: lowestUser.hasInProgressTasks,
-      targetPoints: lowestUser.targetPoints,
-    } : null;
+    return lowestUser
+      ? {
+          accountId: lowestUser.accountId,
+          displayName: lowestUser.displayName,
+          emailAddress: lowestUser.emailAddress,
+          hasInProgressTasks: lowestUser.hasInProgressTasks,
+          targetPoints: lowestUser.targetPoints,
+        }
+      : null;
   } catch (error) {
     logger.error(`En düşük done puanlı kullanıcı bulunamadı: ${error.message}`);
     return null;
@@ -1119,21 +1137,30 @@ ipcMain.on("save-target-points", async (event, data) => {
 
 ipcMain.on("start-automation", async (event, data) => {
   try {
-    const { sourceEmail, assignmentMethod, automationComment, updateTaskStatus, isTestMode } = data;
-    
+    const {
+      sourceEmail,
+      assignmentMethod,
+      automationComment,
+      updateTaskStatus,
+      isTestMode,
+    } = data;
+
     logger.info("=== Otomasyon Başlatılıyor ===");
     logger.info(`Kaynak E-posta: ${sourceEmail}`);
     logger.info(`Atama Yöntemi: ${assignmentMethod}`);
-    logger.info(`Otomatik Yorum: ${automationComment ? 'Var' : 'Yok'}`);
-    logger.info(`Durum Güncellemesi: ${updateTaskStatus ? 'Aktif' : 'Pasif'}`);
-    logger.info(`Test Modu: ${isTestMode ? 'Aktif' : 'Pasif'}`);
+    logger.info(`Otomatik Yorum: ${automationComment ? "Var" : "Yok"}`);
+    logger.info(`Durum Güncellemesi: ${updateTaskStatus ? "Aktif" : "Pasif"}`);
+    logger.info(`Test Modu: ${isTestMode ? "Aktif" : "Pasif"}`);
 
     // Todo durumundaki ve source_email'e atanmış taskları al
     const tasks = await getTasksBySourceEmail(sourceEmail);
-    
+
     if (!tasks || tasks.length === 0) {
       logger.info("Atanacak task bulunamadı");
-      event.reply("automation-completed", { success: true, message: "Atanacak task bulunamadı" });
+      event.reply("automation-completed", {
+        success: true,
+        message: "Atanacak task bulunamadı",
+      });
       return;
     }
 
@@ -1145,28 +1172,31 @@ ipcMain.on("start-automation", async (event, data) => {
     // Her task için atama işlemini gerçekleştir
     for (const task of tasks) {
       logger.info(`Task işleniyor: ${task.key}`);
-      
+
       // Tüm developerları al
       const allUsers = await getProjectUsers();
-      
+
       // Daha önce bu çalıştırmada task atanmış developerları filtrele
-      const availableUsers = allUsers.filter(user => 
-        !user.hasInProgressTasks && !assignedDeveloperIds.has(user.accountId)
+      const availableUsers = allUsers.filter(
+        (user) =>
+          !user.hasInProgressTasks && !assignedDeveloperIds.has(user.accountId)
       );
-      
+
       // Eğer uygun developer kalmadıysa bildir ve devam et
       if (availableUsers.length === 0) {
-        logger.warn(`Hata: ${task.key} için uygun developer kalmadı. Tüm uygun developerlara task atanmış.`);
+        logger.warn(
+          `Hata: ${task.key} için uygun developer kalmadı. Tüm uygun developerlara task atanmış.`
+        );
         continue;
       }
-      
+
       let assignee;
       switch (assignmentMethod) {
-        case 'lowestTotalAutomation':
+        case "lowestTotalAutomation":
           // Filtrelenmiş listeyi kullan
           assignee = await getUserWithLowestPoints(availableUsers, "total");
           break;
-        case 'lowestDoneAutomation':
+        case "lowestDoneAutomation":
           // Filtrelenmiş listeyi kullan
           assignee = await getUserWithLowestPoints(availableUsers, "done");
           break;
@@ -1179,25 +1209,41 @@ ipcMain.on("start-automation", async (event, data) => {
 
       // Developer ID'sini atanmış listeye ekle
       assignedDeveloperIds.add(assignee.accountId);
-      
+
       if (!isTestMode) {
-        const result = await assignTaskToUser(task.key, assignee.accountId, automationComment, updateTaskStatus, assignmentMethod);
+        const result = await assignTaskToUser(
+          task.key,
+          assignee.accountId,
+          automationComment,
+          updateTaskStatus,
+          assignmentMethod
+        );
         if (result.success) {
           logger.info(`Task atandı: ${task.key} -> ${assignee.displayName}`);
-          logger.info(`Yorum: ${automationComment ? 'Eklendi' : 'Eklenmedi'}`);
-          logger.info(`Durum: ${updateTaskStatus ? '"Selected for Development" olarak güncellendi' : 'Güncellenmedi'}`);
+          logger.info(`Yorum: ${automationComment ? "Eklendi" : "Eklenmedi"}`);
+          logger.info(
+            `Durum: ${
+              updateTaskStatus
+                ? '"Selected for Development" olarak güncellendi'
+                : "Güncellenmedi"
+            }`
+          );
         } else {
           logger.warn(`Task atanamadı: ${task.key} -> ${assignee.displayName}`);
           // Başarısız atama durumunda, developerı atanmış listesinden çıkar
           assignedDeveloperIds.delete(assignee.accountId);
         }
       } else {
-        logger.info(`[TEST MODU] Task atanacaktı: ${task.key} -> ${assignee.displayName}`);
+        logger.info(
+          `[TEST MODU] Task atanacaktı: ${task.key} -> ${assignee.displayName}`
+        );
         if (automationComment) {
           logger.info(`[TEST MODU] Yorum eklenecekti: "${automationComment}"`);
         }
         if (updateTaskStatus) {
-          logger.info(`[TEST MODU] Görev durumu "Selected for Development" olarak güncellenecekti`);
+          logger.info(
+            `[TEST MODU] Görev durumu "Selected for Development" olarak güncellenecekti`
+          );
         }
       }
     }

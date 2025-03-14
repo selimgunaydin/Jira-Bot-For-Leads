@@ -175,6 +175,14 @@
       </div>
 
       <div class="space-y-4">
+        <!-- Test Mode Switch -->
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-sm font-medium text-gray-700">Test Modu</span>
+          <label class="switch">
+            <input type="checkbox" id="testMode" />
+            <span class="slider"></span>
+          </label>
+        </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1"
             >JIRA Base URL</label
@@ -233,21 +241,6 @@
             <option value="To Do">To Do</option>
           </select>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1"
-            >Hariç Tutulacak E-postalar</label
-          >
-          <textarea
-            id="excludedEmails"
-            rows="4"
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
-            placeholder="Her satıra bir e-posta giriniz:&#10;user1@example.com&#10;user2@example.com"
-          ></textarea>
-          <p class="text-sm text-gray-500 mt-1">
-            Her e-postayı yeni bir satıra yazınız
-          </p>
-        </div>
-
         <!-- Otomasyon Aralığı -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -266,16 +259,6 @@
             Otomasyonun kaç dakikada bir çalışacağını belirleyin
           </p>
         </div>
-
-        <!-- Test Mode Switch -->
-        <div class="mt-4 flex items-center justify-between">
-          <span class="text-sm font-medium text-gray-700">Test Modu</span>
-          <label class="switch">
-            <input type="checkbox" id="testMode" />
-            <span class="slider"></span>
-          </label>
-        </div>
-
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1"
             >Performance Hesaplama Türü</label
@@ -289,7 +272,20 @@
             <option value="all">Tüm Puanlar</option>
           </select>
         </div>
-
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Hariç Tutulacak E-postalar</label
+          >
+          <textarea
+            id="excludedEmails"
+            rows="4"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
+            placeholder="Her satıra bir e-posta giriniz:&#10;user1@example.com&#10;user2@example.com"
+          ></textarea>
+          <p class="text-sm text-gray-500 mt-1">
+            Her e-postayı yeni bir satıra yazınız
+          </p>
+        </div>
         <div>
           <label
             class="block text-sm font-medium text-gray-700 mb-2 flex flex-col"
@@ -341,12 +337,18 @@
           <!-- Left Column: Control Panels -->
           <div class="lg:col-span-1 space-y-8">
             <!-- Task Assignment Panel -->
-            <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8">
-              <h3 class="text-lg font-semibold text-gray-800 mb-4">Otomasyon Ayarları</h3>
-              
+            <div
+              class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mb-8"
+            >
+              <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                Otomasyon Ayarları
+              </h3>
+
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Kaynak E-posta</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Kaynak E-posta</label
+                  >
                   <input
                     type="email"
                     id="sourceEmailAutomation"
@@ -354,21 +356,29 @@
                     placeholder="kaynak@email.com"
                   />
                 </div>
-    
+
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Atama Yöntemi</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Atama Yöntemi</label
+                  >
                   <select
                     id="assignmentMethodAutomation"
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
                     required
                   >
-                    <option value="lowestTotalAutomation">Toplam Puanı En Düşük</option>
-                    <option value="lowestDoneAutomation">Done Puanı En Düşük</option>
+                    <option value="lowestTotalAutomation">
+                      Toplam Puanı En Düşük
+                    </option>
+                    <option value="lowestDoneAutomation">
+                      Done Puanı En Düşük
+                    </option>
                   </select>
                 </div>
-    
+
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Otomatik Yorum</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1"
+                    >Otomatik Yorum</label
+                  >
                   <textarea
                     id="automationComment"
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 focus-ring"
@@ -376,34 +386,55 @@
                     rows="3"
                   ></textarea>
                 </div>
-    
+
                 <div class="flex items-center mb-2">
                   <input
                     type="checkbox"
                     id="automationUpdateStatus"
                     class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label for="automationUpdateStatus" class="ml-2 block text-sm text-gray-700">
+                  <label
+                    for="automationUpdateStatus"
+                    class="ml-2 block text-sm text-gray-700"
+                  >
                     Task durumunu "Selected for Development" olarak güncelle
                   </label>
                 </div>
-    
+
                 <button
                   id="startAutomation"
                   class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                   <span>Otomasyonu Başlat</span>
                 </button>
-    
+
                 <button
                   id="stopAutomation"
                   class="w-full mt-2 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2 hidden"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 7a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" clip-rule="evenodd" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 7a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                   <span>Otomasyonu Durdur</span>
                 </button>
@@ -519,8 +550,7 @@
                 </button>
               </div>
             </div>
-                    <!-- Otomasyon Ayarları -->
-
+            <!-- Otomasyon Ayarları -->
           </div>
 
           <!-- Right Column: Statistics and Logs -->
@@ -544,41 +574,41 @@
               <div class="max-w-4xl mx-auto">
                 <div class="flex items-center justify-between mb-4">
                   <div class="flex items-center space-x-2 mb-4">
-                    <h2 class="text-lg font-semibold text-gray-800 ">
+                    <h2 class="text-lg font-semibold text-gray-800">
                       Developer Leaderboard
                     </h2>
                     <button
-                    id="refreshTaskAssignment"
-                    class="text-blue-600 hover:text-blue-700 transition-transform duration-500"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
+                      id="refreshTaskAssignment"
+                      class="text-blue-600 hover:text-blue-700 transition-transform duration-500"
                     >
-                      <path
-                        fill-rule="evenodd"
-                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                  id="editTargetPoints"
-                  class="text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-                    />
-                  </svg>
-                </button>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      id="editTargetPoints"
+                      class="text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                        />
+                      </svg>
+                    </button>
                   </div>
                   <div class="flex items-center space-x-2">
                     <span class="text-sm text-gray-600">Sırala:</span>

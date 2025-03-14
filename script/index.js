@@ -30,7 +30,9 @@ const excludedEmails = document.getElementById("excludedEmails");
 const automationMethod = document.getElementById("assignmentMethodAutomation");
 const sourceEmail = document.getElementById("sourceEmailAutomation");
 const automationComment = document.getElementById("automationComment");
-const automationUpdateStatus = document.getElementById("automationUpdateStatus");
+const automationUpdateStatus = document.getElementById(
+  "automationUpdateStatus"
+);
 const automationIntervalInput = document.getElementById("automationInterval");
 
 jiraBaseUrl.value = localStorage.getItem("JIRA_BASE_URL_LEAD") || "";
@@ -42,8 +44,10 @@ taskStatus.value =
 excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS_LEAD") || "";
 sourceEmail.value = localStorage.getItem("SOURCE_EMAIL_LEAD") || "";
 automationComment.value = localStorage.getItem("AUTOMATION_COMMENT") || "";
-automationUpdateStatus.checked = localStorage.getItem("AUTOMATION_UPDATE_STATUS") === "true";
-automationIntervalInput.value = localStorage.getItem("AUTOMATION_INTERVAL") || "1";
+automationUpdateStatus.checked =
+  localStorage.getItem("AUTOMATION_UPDATE_STATUS") === "true";
+automationIntervalInput.value =
+  localStorage.getItem("AUTOMATION_INTERVAL") || "1";
 const configInputs = [
   jiraBaseUrl,
   email,
@@ -145,24 +149,29 @@ function checkButtonState() {
 async function updateUserList() {
   isUsersLoaded = false;
   checkButtonState();
-  
+
   // localStorage'den kullanıcı verilerini kontrol et
   const cachedUsersData = localStorage.getItem("CACHED_USERS_DATA");
   if (cachedUsersData) {
     try {
       const users = JSON.parse(cachedUsersData);
       cachedUsers = users;
-      assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
+      assigneeUser.innerHTML =
+        '<option value="">Select a user (optional)</option>';
       let needsTargetPoints = false;
 
       users.forEach((user) => {
         const option = document.createElement("option");
         option.value = user.accountId;
-        const savedTarget = localStorage.getItem(`targetPoints-${user.emailAddress}`);
+        const savedTarget = localStorage.getItem(
+          `targetPoints-${user.emailAddress}`
+        );
         if (!savedTarget) {
           needsTargetPoints = true;
         }
-        option.textContent = `${user.displayName} ${user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"}`;
+        option.textContent = `${user.displayName} ${
+          user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"
+        }`;
         assigneeUser.appendChild(option);
       });
 
@@ -304,21 +313,26 @@ editTargetPoints.addEventListener("click", () => {
 ipcRenderer.on("project-users-data", async (event, users) => {
   try {
     cachedUsers = users;
-    
+
     // Kullanıcı verilerini localStorage'e kaydet
     localStorage.setItem("CACHED_USERS_DATA", JSON.stringify(users));
 
-    assigneeUser.innerHTML = '<option value="">Select a user (optional)</option>';
+    assigneeUser.innerHTML =
+      '<option value="">Select a user (optional)</option>';
     let needsTargetPoints = false;
 
     users.forEach((user) => {
       const option = document.createElement("option");
       option.value = user.accountId;
-      const savedTarget = localStorage.getItem(`targetPoints-${user.emailAddress}`);
+      const savedTarget = localStorage.getItem(
+        `targetPoints-${user.emailAddress}`
+      );
       if (!savedTarget) {
         needsTargetPoints = true;
       }
-      option.textContent = `${user.displayName} ${user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"}`;
+      option.textContent = `${user.displayName} ${
+        user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"
+      }`;
       assigneeUser.appendChild(option);
     });
 
@@ -779,75 +793,101 @@ selimModal.addEventListener("click", (e) => {
 
 // Log fonksiyonu
 function log(message) {
-  const logs = document.getElementById('logs');
-  const formattedMessage = message.trim() + '\n';
+  const logs = document.getElementById("logs");
+  const formattedMessage = message.trim() + "\n";
   logs.textContent += formattedMessage;
   logs.scrollTop = logs.scrollHeight;
 }
 
 // Otomasyon fonksiyonları
 async function startAutomation() {
-  const sourceEmail = document.getElementById('sourceEmailAutomation').value;
-  const assignmentMethod = document.getElementById('assignmentMethodAutomation').value;
-  const automationComment = document.getElementById('automationComment').value;
-  const updateTaskStatus = document.getElementById('automationUpdateStatus').checked;
-  const testMode = document.getElementById('testMode').checked;
-  const intervalMinutes = parseInt(document.getElementById('automationInterval').value) || 1;
+  const sourceEmail = document.getElementById("sourceEmailAutomation").value;
+  const assignmentMethod = document.getElementById(
+    "assignmentMethodAutomation"
+  ).value;
+  const automationComment = document.getElementById("automationComment").value;
+  const updateTaskStatus = document.getElementById(
+    "automationUpdateStatus"
+  ).checked;
+  const testMode = document.getElementById("testMode").checked;
+  const intervalMinutes =
+    parseInt(document.getElementById("automationInterval").value) || 1;
 
   if (!sourceEmail) {
-    log('Hata: Kaynak e-posta adresi gerekli');
+    log("Hata: Kaynak e-posta adresi gerekli");
     return;
   }
 
   try {
     // Butonları güncelle
-    const startAutomationBtn = document.getElementById('startAutomation');
-    const stopAutomationBtn = document.getElementById('stopAutomation');
-    
+    const startAutomationBtn = document.getElementById("startAutomation");
+    const stopAutomationBtn = document.getElementById("stopAutomation");
+
     startAutomationBtn.disabled = true;
-    startAutomationBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    startAutomationBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Otomasyon Çalışıyor...';
-    
-    stopAutomationBtn.classList.remove('hidden');
+    startAutomationBtn.classList.add("opacity-50", "cursor-not-allowed");
+    startAutomationBtn.innerHTML =
+      '<svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Otomasyon Çalışıyor...';
+
+    stopAutomationBtn.classList.remove("hidden");
     stopAutomationBtn.disabled = false;
 
-    log('Otomasyon başlatılıyor...');
+    log("Otomasyon başlatılıyor...");
     log(`Kaynak e-posta: ${sourceEmail}`);
     log(`Atama yöntemi: ${assignmentMethod}`);
-    log(`Otomatik yorum: ${automationComment ? 'Var' : 'Yok'}`);
-    log(`Durum güncellemesi: ${updateTaskStatus ? 'Aktif' : 'Pasif'}`);
+    log(`Otomatik yorum: ${automationComment ? "Var" : "Yok"}`);
+    log(`Durum güncellemesi: ${updateTaskStatus ? "Aktif" : "Pasif"}`);
     log(`Çalışma aralığı: ${intervalMinutes} dakika`);
-    log(`Test modu: ${testMode ? 'Aktif' : 'Pasif'}`);
+    log(`Test modu: ${testMode ? "Aktif" : "Pasif"}`);
 
     // Yorum ve durum güncellemesi bilgilerini localStorage'a kaydet
     localStorage.setItem("AUTOMATION_COMMENT", automationComment);
-    localStorage.setItem("AUTOMATION_UPDATE_STATUS", updateTaskStatus.toString());
+    localStorage.setItem(
+      "AUTOMATION_UPDATE_STATUS",
+      updateTaskStatus.toString()
+    );
     localStorage.setItem("AUTOMATION_INTERVAL", intervalMinutes);
 
     // İlk çalıştırma
-    await runAutomation(sourceEmail, assignmentMethod, automationComment, updateTaskStatus, testMode);
+    await runAutomation(
+      sourceEmail,
+      assignmentMethod,
+      automationComment,
+      updateTaskStatus,
+      testMode
+    );
 
     // Belirlenen dakika aralığıyla çalıştır
     automationInterval = setInterval(async () => {
-      await runAutomation(sourceEmail, assignmentMethod, automationComment, updateTaskStatus, testMode);
+      await runAutomation(
+        sourceEmail,
+        assignmentMetŞhod,
+        automationComment,
+        updateTaskStatus,
+        testMode
+      );
     }, intervalMinutes * 60 * 1000); // dakika -> milisaniye dönüşümü
 
     isAutomationRunning = true;
-
   } catch (error) {
     log(`Hata: ${error.message}`);
     stopAutomation();
   }
 }
 
-async function runAutomation(sourceEmail, assignmentMethod, automationComment, updateTaskStatus, testMode) {
+async function runAutomation(
+  sourceEmail,
+  assignmentMethod,
+  automationComment,
+  updateTaskStatus,
+  testMode
+) {
   try {
-    ipcRenderer.send('start-automation', {
+    ipcRenderer.send("start-automation", {
       sourceEmail,
       assignmentMethod,
       automationComment,
       updateTaskStatus,
-      isTestMode: testMode
+      isTestMode: testMode,
     });
   } catch (error) {
     log(`Otomasyon çalıştırma hatası: ${error.message}`);
@@ -863,52 +903,58 @@ function stopAutomation() {
   isAutomationRunning = false;
 
   // Butonları güncelle
-  const startAutomationBtn = document.getElementById('startAutomation');
-  const stopAutomationBtn = document.getElementById('stopAutomation');
-  
+  const startAutomationBtn = document.getElementById("startAutomation");
+  const stopAutomationBtn = document.getElementById("stopAutomation");
+
   startAutomationBtn.disabled = false;
-  startAutomationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-  startAutomationBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
-  
-  stopAutomationBtn.classList.add('hidden');
+  startAutomationBtn.classList.remove("opacity-50", "cursor-not-allowed");
+  startAutomationBtn.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
+
+  stopAutomationBtn.classList.add("hidden");
   stopAutomationBtn.disabled = true;
 
-  log('Otomasyon durduruldu');
+  log("Otomasyon durduruldu");
 }
 
 // Event listener'ları ekle
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener("DOMContentLoaded", function () {
   // ... existing code ...
 
-  const startAutomationBtn = document.getElementById('startAutomation');
-  const stopAutomationBtn = document.getElementById('stopAutomation');
-  const automationComment = document.getElementById('automationComment');
-  const automationUpdateStatus = document.getElementById('automationUpdateStatus');
-  const automationIntervalInput = document.getElementById('automationInterval');
-  
+  const startAutomationBtn = document.getElementById("startAutomation");
+  const stopAutomationBtn = document.getElementById("stopAutomation");
+  const automationComment = document.getElementById("automationComment");
+  const automationUpdateStatus = document.getElementById(
+    "automationUpdateStatus"
+  );
+  const automationIntervalInput = document.getElementById("automationInterval");
+
   if (startAutomationBtn) {
-    startAutomationBtn.addEventListener('click', startAutomation);
+    startAutomationBtn.addEventListener("click", startAutomation);
   }
-  
+
   if (stopAutomationBtn) {
-    stopAutomationBtn.addEventListener('click', stopAutomation);
+    stopAutomationBtn.addEventListener("click", stopAutomation);
   }
 
   // Otomasyon ayarlarının değişikliklerini local storage'a kaydet
   if (automationComment) {
-    automationComment.addEventListener('change', () => {
+    automationComment.addEventListener("change", () => {
       localStorage.setItem("AUTOMATION_COMMENT", automationComment.value);
     });
   }
 
   if (automationUpdateStatus) {
-    automationUpdateStatus.addEventListener('change', () => {
-      localStorage.setItem("AUTOMATION_UPDATE_STATUS", automationUpdateStatus.checked.toString());
+    automationUpdateStatus.addEventListener("change", () => {
+      localStorage.setItem(
+        "AUTOMATION_UPDATE_STATUS",
+        automationUpdateStatus.checked.toString()
+      );
     });
   }
 
   if (automationIntervalInput) {
-    automationIntervalInput.addEventListener('change', () => {
+    automationIntervalInput.addEventListener("change", () => {
       const value = parseInt(automationIntervalInput.value) || 1;
       // En az 1 dakika olmalı
       const safeValue = Math.max(1, value);
@@ -919,17 +965,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Otomasyon tamamlandığında
-ipcRenderer.on('automation-completed', (event, result) => {
+ipcRenderer.on("automation-completed", (event, result) => {
   if (!isAutomationRunning) {
     // Eğer otomasyon durdurulmuşsa butonları güncelle
-    const startAutomationBtn = document.getElementById('startAutomation');
-    const stopAutomationBtn = document.getElementById('stopAutomation');
-    
+    const startAutomationBtn = document.getElementById("startAutomation");
+    const stopAutomationBtn = document.getElementById("stopAutomation");
+
     startAutomationBtn.disabled = false;
-    startAutomationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    startAutomationBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
-    
-    stopAutomationBtn.classList.add('hidden');
+    startAutomationBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    startAutomationBtn.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg><span>Otomasyonu Başlat</span>';
+
+    stopAutomationBtn.classList.add("hidden");
     stopAutomationBtn.disabled = true;
   }
 
