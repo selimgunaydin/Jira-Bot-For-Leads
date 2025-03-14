@@ -82,6 +82,28 @@ async function getProjectUsers() {
   try {
     logger.info("Proje Developerları yükleniyor..");
 
+    // localStorage'den kullanıcı verilerini kontrol et
+    if (global.mainWindow) {
+      const cachedUsersData = await global.mainWindow.webContents.executeJavaScript(
+        `localStorage.getItem('CACHED_USERS_DATA')`,
+        true
+      );
+      
+      if (cachedUsersData) {
+        try {
+          const users = JSON.parse(cachedUsersData);
+          logger.info("Developer verileri localStorage'den alındı.");
+          return users;
+        } catch (error) {
+          logger.error("localStorage'den veri okuma hatası:", error);
+          await global.mainWindow.webContents.executeJavaScript(
+            `localStorage.removeItem('CACHED_USERS_DATA')`,
+            true
+          );
+        }
+      }
+    }
+
     // Son 1 ayda projede aktif olan Developerları bulmak için JQL sorgusu
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
@@ -145,6 +167,14 @@ async function getProjectUsers() {
 
     const activeUsers = await Promise.all(userPromises);
     logger.info(`Toplam ${activeUsers.length} aktif Developer bulundu.`);
+
+    // Kullanıcı verilerini localStorage'e kaydet
+    if (global.mainWindow) {
+      await global.mainWindow.webContents.executeJavaScript(
+        `localStorage.setItem('CACHED_USERS_DATA', '${JSON.stringify(activeUsers)}')`,
+        true
+      );
+    }
 
     return activeUsers;
   } catch (error) {
@@ -744,7 +774,7 @@ function logSummary(
 // Otomasyon fonksiyonları
 async function getTasksBySourceEmail(sourceEmail) {
   try {
-    const jqlQuery = `status = "To Do" AND assignee = "${sourceEmail}"`;
+    const jqlQuery = `project = ${PROJECT_KEY} AND status = "To Do" AND assignee = "${sourceEmail}"`;
     const response = await axios.get(
       `${JIRA_BASE_URL}/rest/api/3/search?jql=${encodeURIComponent(jqlQuery)}`,
       {
