@@ -860,7 +860,7 @@ async function startAutomation() {
     automationInterval = setInterval(async () => {
       await runAutomation(
         sourceEmail,
-        assignmentMetŞhod,
+        assignmentMethod,
         automationComment,
         updateTaskStatus,
         testMode
