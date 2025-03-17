@@ -150,47 +150,6 @@ async function updateUserList() {
   isUsersLoaded = false;
   checkButtonState();
 
-  // localStorage'den kullanıcı verilerini kontrol et
-  const cachedUsersData = localStorage.getItem("CACHED_USERS_DATA");
-  if (cachedUsersData) {
-    try {
-      const users = JSON.parse(cachedUsersData);
-      cachedUsers = users;
-      assigneeUser.innerHTML =
-        '<option value="">Select a user (optional)</option>';
-      let needsTargetPoints = false;
-
-      users.forEach((user) => {
-        const option = document.createElement("option");
-        option.value = user.accountId;
-        const savedTarget = localStorage.getItem(
-          `targetPoints-${user.emailAddress}`
-        );
-        if (!savedTarget) {
-          needsTargetPoints = true;
-        }
-        option.textContent = `${user.displayName} ${
-          user.hasInProgressTasks ? "(🔄 In Progress)" : "(✅ Available)"
-        }`;
-        assigneeUser.appendChild(option);
-      });
-
-      isUsersLoaded = true;
-      checkButtonState();
-
-      if (needsTargetPoints) {
-        showTargetPointsModal();
-      } else {
-        await calculateUserPoints();
-      }
-      return;
-    } catch (error) {
-      console.error("Error parsing cached users data:", error);
-      localStorage.removeItem("CACHED_USERS_DATA");
-    }
-  }
-
-  // Eğer localStorage'de veri yoksa veya hatalıysa, yeni veri çek
   ipcRenderer.send("get-project-users");
 }
 
@@ -218,7 +177,6 @@ function refreshTaskAssignmentArea() {
 
 // Add click event to refresh button
 refreshTaskAssignment.addEventListener("click", async () => {
-  localStorage.removeItem("CACHED_USERS_DATA");
   await updateUserList();
 });
 
@@ -313,9 +271,6 @@ editTargetPoints.addEventListener("click", () => {
 ipcRenderer.on("project-users-data", async (event, users) => {
   try {
     cachedUsers = users;
-
-    // Kullanıcı verilerini localStorage'e kaydet
-    localStorage.setItem("CACHED_USERS_DATA", JSON.stringify(users));
 
     assigneeUser.innerHTML =
       '<option value="">Select a user (optional)</option>';

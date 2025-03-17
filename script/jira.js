@@ -81,30 +81,6 @@ async function hasInProgressTasks(accountId) {
 async function getProjectUsers() {
   try {
     logger.info("Proje Developerları yükleniyor..");
-
-    // localStorage'den kullanıcı verilerini kontrol et
-    if (global.mainWindow) {
-      const cachedUsersData =
-        await global.mainWindow.webContents.executeJavaScript(
-          `localStorage.getItem('CACHED_USERS_DATA')`,
-          true
-        );
-
-      if (cachedUsersData) {
-        try {
-          const users = JSON.parse(cachedUsersData);
-          logger.info("Developer verileri localStorage'den alındı.");
-          return users;
-        } catch (error) {
-          logger.error("localStorage'den veri okuma hatası:", error);
-          await global.mainWindow.webContents.executeJavaScript(
-            `localStorage.removeItem('CACHED_USERS_DATA')`,
-            true
-          );
-        }
-      }
-    }
-
     // Son 1 ayda projede aktif olan Developerları bulmak için JQL sorgusu
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
@@ -168,16 +144,6 @@ async function getProjectUsers() {
 
     const activeUsers = await Promise.all(userPromises);
     logger.info(`Toplam ${activeUsers.length} aktif Developer bulundu.`);
-
-    // Kullanıcı verilerini localStorage'e kaydet
-    if (global.mainWindow) {
-      await global.mainWindow.webContents.executeJavaScript(
-        `localStorage.setItem('CACHED_USERS_DATA', '${JSON.stringify(
-          activeUsers
-        )}')`,
-        true
-      );
-    }
 
     return activeUsers;
   } catch (error) {
@@ -359,17 +325,37 @@ async function addCommentToTask(taskKey, comment) {
 
 async function updateTaskStatus(taskKey, status) {
   try {
+    // Step 1: Fetch available transitions for the issue
+    const transitionsResponse = await axios.get(
+      `${JIRA_BASE_URL}/rest/api/3/issue/${taskKey}/transitions`,
+      {
+        auth: { username: EMAIL, password: API_TOKEN },
+      }
+    );
+
+    // Step 2: Find the transition ID for the desired status
+    const transitions = transitionsResponse.data.transitions;
+    const targetTransition = transitions.find(
+      (t) => t.name === status
+    );
+
+    if (!targetTransition) {
+      throw new Error(`No valid transition found for status "${status}"`);
+    }
+
+    // Step 3: Perform the transition
     await axios.post(
       `${JIRA_BASE_URL}/rest/api/3/issue/${taskKey}/transitions`,
       {
         transition: {
-          id: status === "Selected for Development" ? "3" : "4", // 3: Selected for Development, 4: In Progress
+          id: targetTransition.id,
         },
       },
       {
         auth: { username: EMAIL, password: API_TOKEN },
       }
     );
+
     logger.info(`Task ${taskKey} durumu "${status}" olarak güncellendi.`);
   } catch (error) {
     logger.error(
