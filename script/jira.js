@@ -478,8 +478,8 @@ async function getUserWithLowestPoints(users, type = "done") {
     return null;
   }
 
-  let lowestPointsUser = null;
-  let lowestPoints = Infinity;
+  let lowestPercentageUser = null;
+  let lowestPercentage = Infinity;
 
   // Kullanıcı görevlerini tek seferde almak için
   let taskMap = null;
@@ -493,9 +493,12 @@ async function getUserWithLowestPoints(users, type = "done") {
     // Önbellekte veri var ve güncel mi kontrol et
     if (cachedData && now - cachedData.timestamp < CACHE_TTL) {
       const points = type === "done" ? cachedData.done : cachedData.total;
-      if (points < lowestPoints) {
-        lowestPoints = points;
-        lowestPointsUser = user;
+      const targetPoints = cachedData.targetPoints || 0;
+      const percentage = targetPoints > 0 ? (points / targetPoints) * 100 : 0;
+
+      if (percentage < lowestPercentage) {
+        lowestPercentage = percentage;
+        lowestPercentageUser = user;
       }
     } else {
       // Güncel veri yoksa, güncellenmesi gereken kullanıcıyı ekle
@@ -512,22 +515,41 @@ async function getUserWithLowestPoints(users, type = "done") {
       const tasks = taskMap.get(user.accountId) || [];
       const { donePoints, totalPoints } = calculatePoints(tasks);
 
+      // Hedef puanları al
+      const targetPoints = await getTargetPointsForUser(user.emailAddress);
+
+      // Yüzdelik oranı hesapla
+      const points = type === "done" ? donePoints : totalPoints;
+      const percentage = targetPoints > 0 ? (points / targetPoints) * 100 : 0;
+
       // Önbelleğe al
       userPointsCache.set(user.accountId, {
         done: donePoints,
         total: totalPoints,
+        targetPoints: targetPoints,
         timestamp: now,
       });
 
-      const points = type === "done" ? donePoints : totalPoints;
-      if (points < lowestPoints) {
-        lowestPoints = points;
-        lowestPointsUser = user;
+      if (percentage < lowestPercentage) {
+        lowestPercentage = percentage;
+        lowestPercentageUser = user;
       }
     }
   }
 
-  return lowestPointsUser;
+  return lowestPercentageUser;
+}
+
+// Hedef puanları almak için yardımcı fonksiyon
+async function getTargetPointsForUser(email) {
+  if (global.mainWindow) {
+    const value = await global.mainWindow.webContents.executeJavaScript(
+      `localStorage.getItem("targetPoints-${email}")`,
+      true
+    );
+    return value ? parseInt(value) : 0;
+  }
+  return 0;
 }
 
 // Tüm kullanıcılar için toplu task yükleme işlemi

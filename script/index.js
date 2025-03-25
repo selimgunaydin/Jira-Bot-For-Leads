@@ -342,11 +342,11 @@ leaderboardOrder.addEventListener("change", () => {
 function updateLeaderboard(userPointsData, orderBy = currentOrder) {
   const leaderboard = document.getElementById("leaderboard");
 
-  // Puanlara göre sırala
+  // Yüzdelik orana göre sırala
   const sortedUsers = [...userPointsData].sort((a, b) => {
-    const pointsA = orderBy === "done" ? a.donePoints : a.totalPoints;
-    const pointsB = orderBy === "done" ? b.donePoints : b.totalPoints;
-    return pointsB - pointsA;
+    const percentageA = orderBy === "done" ? a.currentCompletionRatio : (a.totalPoints / a.targetPoints) * 100;
+    const percentageB = orderBy === "done" ? b.currentCompletionRatio : (b.totalPoints / b.targetPoints) * 100;
+    return percentageB - percentageA; // Yüksek yüzde en üstte
   });
 
   // Leaderboard HTML'ini oluştur
