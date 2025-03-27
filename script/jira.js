@@ -174,34 +174,10 @@ async function getUserAllTasks(accountId) {
     logger.error(`Kullanıcı e-posta adresi alınamadı: ${error.message}`);
   }
 
-  // PROJECT_KEY filtresi olmadan hesaplanacak kullanıcıları al
-  const excludedEmails = global.mainWindow
-    ? await global.mainWindow.webContents.executeJavaScript(
-        `localStorage.getItem('EXCLUDED_FROM_PROJECT_KEY_FILTER')`,
-        true
-      )
-    : "";
-
-  const excludedEmailList = excludedEmails
-    ? excludedEmails.split(/[\n\r]+/).map((email) => email.trim().toLowerCase())
-    : [];
-
   // JQL sorgusunu oluştur
-  let jqlQuery = "";
-  if (excludedEmailList.includes(userEmail)) {
-    // PROJECT_KEY filtresi olmadan
-    jqlQuery = `assignee = ${accountId}
-      AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
-      ORDER BY updated DESC`;
-
-    console.log(jqlQuery);
-  } else {
-    // Normal sorgu (PROJECT_KEY filtresi ile)
-    jqlQuery = `project = "${PROJECT_KEY}" 
-      AND assignee = ${accountId}
-      AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
-      ORDER BY updated DESC`;
-  }
+  let jqlQuery = `assignee = ${accountId}
+  AND updated >= "${firstDayOfMonth.toISOString().split("T")[0]}" 
+  ORDER BY updated DESC`;
 
   try {
     const response = await axios.get(
@@ -565,20 +541,6 @@ async function getBulkUserTasks(users) {
   const userEmails = new Map();
 
   try {
-    // Dışlanan e-posta listesini al
-    const excludedEmails = global.mainWindow
-      ? await global.mainWindow.webContents.executeJavaScript(
-          `localStorage.getItem('EXCLUDED_FROM_PROJECT_KEY_FILTER')`,
-          true
-        )
-      : "";
-
-    const excludedEmailList = excludedEmails
-      ? excludedEmails
-          .split(/[\n\r]+/)
-          .map((email) => email.trim().toLowerCase())
-      : [];
-
     // Tüm kullanıcılar için paralel e-posta sorgusu yap
     await Promise.all(
       users.map(async (user) => {
@@ -605,18 +567,9 @@ async function getBulkUserTasks(users) {
       const userEmail = userEmails.get(user.accountId) || "";
       let jqlQuery = "";
 
-      if (excludedEmailList.includes(userEmail)) {
-        // PROJECT_KEY filtresi olmadan
-        jqlQuery = `assignee = ${user.accountId}
-          AND updated >= "${firstDayString}" 
-          ORDER BY updated DESC`;
-      } else {
-        // Normal sorgu (PROJECT_KEY filtresi ile)
-        jqlQuery = `project = "${PROJECT_KEY}" 
-          AND assignee = ${user.accountId}
-          AND updated >= "${firstDayString}" 
-          ORDER BY updated DESC`;
-      }
+      jqlQuery = `assignee = ${user.accountId}
+      AND updated >= "${firstDayString}" 
+      ORDER BY updated DESC`;
 
       try {
         const response = await axios.get(

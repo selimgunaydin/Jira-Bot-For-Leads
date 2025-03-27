@@ -192,16 +192,6 @@ document
 // Sayfa yüklendiğinde performans tipini seç
 document.getElementById("performanceType").value = performanceType;
 
-// PROJECT_KEY filtresi olmadan hesaplanacak kullanıcılar için localStorage işlemleri
-const excludedFromProjectKeyFilter = document.getElementById(
-  "excludedFromProjectKeyFilter"
-);
-excludedFromProjectKeyFilter.value =
-  localStorage.getItem("EXCLUDED_FROM_PROJECT_KEY_FILTER") || "";
-excludedFromProjectKeyFilter.addEventListener("change", (e) => {
-  localStorage.setItem("EXCLUDED_FROM_PROJECT_KEY_FILTER", e.target.value);
-});
-
 // Developer puanlarını hesapla
 async function calculateUserPoints() {
   isCalculating = true;
