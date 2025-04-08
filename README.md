@@ -24,7 +24,7 @@ Bu uygulama, Jira projelerindeki görevlerin otomatik olarak atanmasını ve yö
 
 - **Özelleştirilebilir Ayarlar**
   - Test modu desteği
-  - Hariç tutulacak kullanıcı listesi
+  - Developer listesi
   - Esnek task status seçenekleri
   - Modern ve kullanıcı dostu arayüz
 
@@ -71,7 +71,7 @@ npm run pack-linux   # Linux için
 2. **Uygulama Ayarları**
    - Görev durumu seçimi
    - Performans hesaplama tipi
-   - Hariç tutulacak e-postalar
+   - Developer e-postaları
    - Test modu ayarları
 
 ## 🛠 Teknolojiler

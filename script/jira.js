@@ -39,7 +39,7 @@ let EMAIL;
 let API_TOKEN;
 let PROJECT_KEY = "S1";
 let TASK_STATUS = "Selected for Development";
-let EXCLUDED_EMAILS = "";
+let INCLUDED_EMAILS = "";
 
 ipcMain.on("update-config", (event, config) => {
   JIRA_BASE_URL = config.JIRA_BASE_URL;
@@ -47,14 +47,14 @@ ipcMain.on("update-config", (event, config) => {
   API_TOKEN = config.API_TOKEN;
   PROJECT_KEY = config.PROJECT_KEY || "S1";
   TASK_STATUS = config.TASK_STATUS || "Selected for Development";
-  EXCLUDED_EMAILS = config.EXCLUDED_EMAILS || "";
+  INCLUDED_EMAILS = config.INCLUDED_EMAILS || "";
   logger.info("---- Konfigürasyon güncellendi ----");
   logger.info(`JIRA_BASE_URL: ${JIRA_BASE_URL}`);
   logger.info(`EMAIL: ${EMAIL}`);
   logger.info(`API_TOKEN: ********`);
   logger.info(`PROJECT_KEY: ${PROJECT_KEY}`);
   logger.info(`TASK_STATUS: ${TASK_STATUS}`);
-  logger.info(`EXCLUDED_EMAILS: ${EXCLUDED_EMAILS}`);
+  logger.info(`INCLUDED_EMAILS: ${INCLUDED_EMAILS}`);
   logger.info("---- Konfigürasyon güncellendi ----");
 });
 
@@ -85,9 +85,9 @@ async function getProjectUsers() {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    // Hariç tutulacak e-postaları diziye çevir ve boşlukları temizle
-    const excludedEmailList = EXCLUDED_EMAILS
-      ? EXCLUDED_EMAILS.split(/[\n\r]+/)
+    // e-postaları diziye çevir ve boşlukları temizle
+    const includedEmailList = INCLUDED_EMAILS
+      ? INCLUDED_EMAILS.split(/[\n\r]+/)
           .map((email) => email.trim().toLowerCase())
           .filter((email) => email.length > 0)
       : [];
@@ -132,7 +132,7 @@ async function getProjectUsers() {
           !user.displayName.includes("addon") &&
           !user.displayName.toLowerCase().includes("bot") &&
           !user.displayName.toLowerCase().includes("system") &&
-          !excludedEmailList.includes(user.emailAddress.toLowerCase())
+          includedEmailList.includes(user.emailAddress.toLowerCase())
       )
       .map(async (user) => {
         const hasInProgress = await hasInProgressTasks(user.accountId);

@@ -26,7 +26,7 @@ const email = document.getElementById("email");
 const apiToken = document.getElementById("apiToken");
 const projectKey = document.getElementById("projectKey");
 const taskStatus = document.getElementById("taskStatus");
-const excludedEmails = document.getElementById("excludedEmails");
+const includedEmails = document.getElementById("includedEmails");
 const automationMethod = document.getElementById("assignmentMethodAutomation");
 const sourceEmail = document.getElementById("sourceEmailAutomation");
 const automationComment = document.getElementById("automationComment");
@@ -41,7 +41,7 @@ apiToken.value = localStorage.getItem("API_TOKEN_LEAD") || "";
 projectKey.value = localStorage.getItem("PROJECT_KEY_LEAD") || "S1";
 taskStatus.value =
   localStorage.getItem("TASK_STATUS_LEAD") || "Selected for Development";
-excludedEmails.value = localStorage.getItem("EXCLUDED_EMAILS_LEAD") || "";
+includedEmails.value = localStorage.getItem("INCLUDED_EMAILS_LEAD") || "";
 sourceEmail.value = localStorage.getItem("SOURCE_EMAIL_LEAD") || "";
 automationComment.value = localStorage.getItem("AUTOMATION_COMMENT") || "";
 automationUpdateStatus.checked =
@@ -54,7 +54,7 @@ const configInputs = [
   apiToken,
   projectKey,
   taskStatus,
-  excludedEmails,
+  includedEmails,
 ];
 configInputs.forEach((input) => {
   input.addEventListener("change", () => {
@@ -63,7 +63,7 @@ configInputs.forEach((input) => {
     localStorage.setItem("API_TOKEN_LEAD", apiToken.value);
     localStorage.setItem("PROJECT_KEY_LEAD", projectKey.value);
     localStorage.setItem("TASK_STATUS_LEAD", taskStatus.value);
-    localStorage.setItem("EXCLUDED_EMAILS_LEAD", excludedEmails.value);
+    localStorage.setItem("INCLUDED_EMAILS_LEAD", includedEmails.value);
     localStorage.setItem("SOURCE_EMAIL_LEAD", sourceEmail.value);
     ipcRenderer.send("update-config", {
       JIRA_BASE_URL: jiraBaseUrl.value,
@@ -71,7 +71,7 @@ configInputs.forEach((input) => {
       API_TOKEN: apiToken.value,
       PROJECT_KEY: projectKey.value,
       TASK_STATUS: taskStatus.value,
-      EXCLUDED_EMAILS: excludedEmails.value,
+      INCLUDED_EMAILS: includedEmails.value,
       SOURCE_EMAIL: sourceEmail.value,
     });
   });
@@ -84,7 +84,7 @@ window.addEventListener("load", () => {
     API_TOKEN: apiToken.value,
     PROJECT_KEY: projectKey.value,
     TASK_STATUS: taskStatus.value,
-    EXCLUDED_EMAILS: excludedEmails.value,
+    INCLUDED_EMAILS: includedEmails.value,
     SOURCE_EMAIL: sourceEmail.value,
   });
 });
